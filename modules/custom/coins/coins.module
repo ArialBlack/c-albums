@@ -1,0 +1,36 @@
+<?php 
+
+/**
+* Implements hook_block_info().
+*/
+function coins_block_info() {
+  $blocks = array();
+  $blocks['Coins'] = array(
+    'info' => t('Coins'),
+  );
+
+  return $blocks;
+}
+
+/**
+* Implements hook_block_view().
+*/
+function coins_block_view($delta = '') {
+  $block = array();
+
+  switch ($delta) {
+    case 'Coins':
+      $block['subject'] = '';
+      $block['content'] = _ca_block();
+      break;
+  }
+
+  return $block;
+}
+
+function _ca_block() {
+            $output = 'hi';
+
+ 
+  return $output;
+}

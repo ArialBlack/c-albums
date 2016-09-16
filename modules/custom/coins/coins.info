@@ -1,0 +1,6 @@
+name = Coins albums
+description = code for Coins albums website
+version = 7.x-1.0
+core = 7.x
+dependencies[] = block
+package = Coins albums
