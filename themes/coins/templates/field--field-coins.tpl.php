@@ -43,6 +43,9 @@
  *
  * @ingroup themeable
  */
+$field_album_view = $element['#object']->field_album_view;
+$album_view =$field_album_view['und'][0]['value'];
+echo $album_view;
 ?>
 <!--
 THIS FILE IS NOT USED AND IS HERE AS A STARTING POINT FOR CUSTOMIZATION ONLY.
@@ -57,25 +60,41 @@ HTML comment.
     
     <div class="field-items"<?php print $content_attributes; ?>>
         <div id="magazine" class="flipbook0">
-            <?php $count = 1; ?>
-            <?php foreach ($items as $delta => $item): ?>
+            <?php 
+            
+            
+                $count = count($items);
                 
-                <?php 
-                    if ($count%4 == 1) {  
-                        echo "<div class='album-page'>";
-                    }
-                ?>
+                if ($album_view == 't0') {
+                ///
+                    $numInPage = 4;
                 
-                <div class="field-item <?php print $delta % 2 ? 'odd' : 'even'; ?>"<?php print $item_attributes[$delta]; ?>><?php print render($item); ?></div>
-                
-                <?php 
-                    if ($count%4 == 0) {
-                        echo "</div>";
-                    }
-                    $count++;
-                ?>
-            <?php endforeach; ?>
-            <?php if ($count%4 != 1) echo "</div>"; ?>
+                    $c=0;
+                               
+                    for ($z = 0; $z < $count; $z++) {
+                        for ($x = 0; $x<2; $x++) {
+                            print "<div class='album-page'>";
+                            
+                            for ($y = $c; $y<$c+$numInPage; $y++ ) {
+                                if($z+$y < $count) {
+                                    print '<div class="field-item field-coin">'. render($items[$z+$y]) . '</div>';
+                                    
+                                };  
+                            }
+                            
+                            print "</div>";
+                        }
+                        $c=$y-1;
+                    }          
+                ///
+                } else {
+                     for ($z = 0; $z < $count; $z++) {
+                         print '<div class="field-item field-coin">'. render($items[$z]) . '</div>';
+                     }
+                }
+                                                
+            ?>
         </div><!-- magazine -->
+        
     </div>
 </div>

@@ -3,6 +3,13 @@
 /**
 * Implements hook_block_info().
 */
+
+function coins_entity_view($entity, $type, $view_mode, $langcode) {
+    if ($view_mode == 'teaser' && $entity->type == 'coin') {
+        $entity->content['field_coin']['#items'] = array_slice($entity->content['field_coin']['#items'], 0, 2);
+    }
+}
+
 function coins_block_info() {
   $blocks = array();
   $blocks['Coins'] = array(
