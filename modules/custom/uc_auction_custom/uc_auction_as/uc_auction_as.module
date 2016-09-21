@@ -1,0 +1,43 @@
+<?php
+
+/**
+ * @defgroup uc_auction_now Ubercart Auction Antisnipe: Extends an auction's
+ * expiration time if a bid is placed soon before its expiration.
+ */
+
+/**
+ * Implements hook_form_alter().
+ */
+function uc_auction_as_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id === 'uc_auction_settings_form') {
+    $form['uc_auction_bid_fset']['uc_auction_as_secs'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Antisnipe expiry delay'),
+      '#description' => t('The minimum time which must transpire between the placement of the last bid on an auction and that auction&rsquo;s expiry. The auction expiry may be delayed so that this minimum is always honored. This will stop the act of &ldquo;sniping,&rdquo; or placing a bid on a product in the last seconds before its expiry so that other bidders don&rsquo;t have time to place a higher counterbid. For example, if this value is set to 90 seconds and a bid is placed less than 90 seconds before the auction expiry time, the expiry time will be reset to 90 seconds after the bid was placed. When using this feature, it is recommended that you disable the <em>Active expiration countdown</em> feature, as it can easily become incorrect.'),
+      '#default_value' => variable_get('uc_auction_as_secs', 300),
+      '#size' => 6,
+      '#weight' => 30,
+      '#field_suffix' => t('seconds'),
+    );
+  }
+}
+
+/**
+ * Implements hook_bid_alter(), an UC Auction hook().
+ */
+function uc_auction_as_bid_alter($node, $bid_record) {
+  $delay = variable_get('uc_auction_as_secs', 300);
+  // If we're within the delay period…
+  if ($bid_record['time'] > $node->uc_auction['expiry'] - $delay) {
+    $record = array(
+      'nid' => $node->nid,
+      'expiry' => $bid_record['time'] + $delay,
+    );
+    // Note that if some other module implementing hook_bid_alter() returns
+    // false and the bid isn't written to the database… Well, then the delay
+    // shouldn't happen. Not quite sure how to get around that - maybe the
+    // API shouldn't let modules cancel bids that way? Hmm.
+    drupal_write_record('uc_auction', $record, 'nid');
+    drupal_set_message(t('The expiry of this auction has been delayed to prevent sniping.', array('@secs' => $delay)));
+  }
+}

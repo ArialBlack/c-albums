@@ -49,8 +49,9 @@ stylesheets[all][] = css/style.css
 scripts[] = 'js/bootstrap.min.js'
 scripts[] = 'js/tooltip.js'
 scripts[] = 'js/popover.js'
+scripts[] = 'js/turn/turn.min.js'
 
-scripts[] = 'js/fondexx.js'
+scripts[] = 'js/coins.js'
 
 
 

@@ -1,0 +1,187 @@
+<?php
+
+/**
+ * @file
+ * The .install file. Contains hooks unique to .install files.
+ *
+ * @ingroup uc_auction
+ */
+
+/**
+ * Implements hook_install().
+ */
+function uc_auction_install() {
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_install_schema('uc_auction')
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function uc_auction_uninstall() {
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_uninstall_schema('uc_auction')
+  global $conf;
+  foreach (array_keys($conf) as $key) {
+    if (strpos($key, 'uc_auction') === 0) {
+      variable_del($key);
+    }
+  }
+}
+
+/**
+ * Implements hook_schema().
+ */
+function uc_auction_schema() {
+  return array(
+    'uc_auction_bids' => array(
+      'description' => 'Keeps tracks of bids on products.',
+      'fields' => array(
+        'bid' => array(
+          'description' => 'The ID number of the bid.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ),
+        'nid' => array(
+          'description' => 'The {node}.nid of the product.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'uid' => array(
+          'description' => 'The {user}.uid of the bidder.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'time' => array(
+          'description' => 'The time the bid was placed.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'amount' => array(
+          'description' => 'The amount that was bid.',
+          'type' => 'numeric',
+          'precision' => 15,
+          'scale' => 3,
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+      ),
+      'primary key' => array('bid'),
+      'indexes' => array(
+        'nid_time' => array('nid','time'),
+        'nid' => array('nid'),
+        'uid' => array('uid'),
+      ),
+    ),
+    'uc_auction' => array(
+      'description' => 'Information about products that are auctions.',
+      'fields' => array(
+        'nid' => array(
+          'description' => 'The {node}.nid of the product.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'expiry' => array(
+          'description' => 'The time when this auction expires (ends).',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'notified' => array(
+          'description' => 'Has the winner been notified by email that they have won the auction?',
+          'type' => 'int',
+          'size' => 'tiny',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'purchased' => array(
+          'description' => 'Has the item been purchased?',
+          'type' => 'int',
+          'size' => 'tiny',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'high_bid' => array(
+          'description' => 'The {uc_auction_bids}.bid of the current high bid (de-normalized data to aid in Views and such).',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'start_price' => array(
+          'description' => 'The initial price for this auctioned item.',
+          'type' => 'numeric',
+          'precision' => 15,
+          'scale' => 3,
+          'unsigned' => FALSE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'bid_increment' => array(
+          'description' => 'The bid increment value for this auction, if the default is to be overridden.',
+          'type' => 'numeric',
+          'precision' => 15,
+          'scale' => 3,
+          'unsigned' => FALSE,
+          'default' => NULL,
+        ),
+        'min_increase' => array(
+          'description' => 'The minimum bid increase for this auction, if the default is to be overridden.',
+          'type' => 'numeric',
+          'precision' => 15,
+          'scale' => 3,
+          'unsigned' => FALSE,
+          'default' => NULL,
+        ),
+        'max_increase' => array(
+          'description' => 'The max bid increase for this auction, if the default is to be overridden.',
+          'type' => 'numeric',
+          'precision' => 15,
+          'scale' => 3,
+          'unsigned' => FALSE,
+          'default' => NULL,
+        ),
+        'max_increase_pctg' => array(
+          'description' => 'The max bid increase percentage for this auction, if the default is to be overridden.',
+          'type' => 'numeric',
+          'precision' => 15,
+          'scale' => 3,
+          'unsigned' => FALSE,
+          'default' => NULL,
+        ),
+      ),
+      'primary key' => array('nid'),
+      'indexes' => array(
+        'expiry' => array('expiry'),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_requirements().
+ */
+function uc_auction_requirements($phase) {
+  if ($phase === 'runtime' && user_access('place bid', drupal_anonymous_user())) {
+    return array(
+      'uc_auction_sanity_anon' => array(
+        'title' => t('UC Auction sanity check'),
+        'description' => t('Your site is currently configured so that anonymous users (users who have not registered or logged in) can place bids on items up for auction! This is not advised. It is recommended that you <a href="!rtp">revoke this permission</a> from anonymous users as soon as possible.', array('!rtp' => url('admin/user/permissions'))),
+        'severity' => REQUIREMENT_ERROR,
+      ),
+    );
+  }
+}

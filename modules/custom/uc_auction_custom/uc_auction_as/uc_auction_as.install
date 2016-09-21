@@ -1,0 +1,20 @@
+<?php
+
+/**
+ * @file
+ * Just another module installation file.
+ *
+ * @ingroup uc_auction_antisnipe
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function uc_auction_as_uninstall() {
+  global $conf;
+  foreach (array_keys($conf) as $key) {
+    if (strpos($key, 'uc_auction_as') === 0) {
+      variable_del($key);
+    }
+  }
+}

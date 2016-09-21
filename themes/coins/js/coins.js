@@ -10,7 +10,9 @@
         /////////////////////////////////////
         $( document ).ready(function() {  
             // let's disable Bootstrap dropdown beh. for primary nav. We don't need it at all
-            //disableBootstrapMenuDropdown(); 
+            //disableBootstrapMenuDropdown();
+            
+            //$('#magazine').turn({gradients: true, acceleration: true}); 
         });
 
 

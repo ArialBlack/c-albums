@@ -1,0 +1,1491 @@
+<?php
+
+/**
+ * @defgroup uc_auction Ubercart Auction: Allows Ubercart products to be
+ * auctioned.
+ *
+ * This module allows sites which are using the Ubercart system of modules for
+ * Drupal to offer products up for auction. Users may bid on the auctions, and
+ * only the user with the highest bid at the expiry of the auction may purchase
+ * it. Please visit the site at the address below for more information on this
+ * module, and especially how to configure and use it.
+ * http://example.com/uc_auction
+ */
+
+/**
+ * @file
+ * The main module file. Has all hooks and most basic callbacks.
+ *
+ * @ingroup uc_auction
+ */
+
+/* Hooks ******************************************************************** */
+
+/**
+ * Implements hook_menu().
+ */
+function uc_auction_menu() {
+  return array(
+    'admin/store/settings/auction' => array(
+      'title' => 'Auction settings',
+      'description' => 'Settings relevant to product auctions.',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('uc_auction_settings_form'),
+      'access arguments' => array('administer store'),
+      'file' => 'uc_auction.admin.inc',
+    ),
+    'node/%node/bids' => array(
+      'title' => 'Bids',
+      'type' => MENU_LOCAL_TASK,
+      'description' => 'The bid history for this product.',
+      'page callback' => 'uc_auction_bid_history',
+      'page arguments' => array(1),
+      // We're using a custom callback for this so that we can say the user
+      // doesn't have permission to view bids on an item which is not being
+      // auctioned; that is, we only want this tab to appear if the node is a
+      // product which is being auctioned. Using the permissions system might
+      // not be the best way to go about this, actually.
+      'access callback' => 'uc_auction_bid_history_perm',
+      'access arguments' => array(1),
+    ),
+    'node/%node/bids/delete/%' => array(
+      'title' => 'Delete bids',
+      'description' => 'Delete bids for this item.',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('uc_auction_bid_del_conf', 1, 4),
+      'access arguments' => array('delete bids'),
+    ),
+    'user/%user/auctions' => array(
+      'title' => 'Auctions',
+      'type' => MENU_LOCAL_TASK,
+      'description' => 'Auctions the user has bid upon',
+      'page callback' => 'uc_auction_user_auctions',
+      'page arguments' => array(1, 'active'),
+      'access callback' => 'uc_auction_user_auctions_perm',
+      'access arguments' => array(1),
+      'file' => 'uc_auction.user.inc',
+      'weight' => 8,
+    ),
+    'user/%user/auctions/active' => array(
+      'title' => 'Active auctions',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'description' => 'Active auctions bid upon',
+      'weight' => 0,
+    ),
+    'user/%user/auctions/won' => array(
+      'title' => 'Auctions won',
+      'type' => MENU_LOCAL_TASK,
+      'description' => 'Expired auctions bid upon and won',
+      'page callback' => 'uc_auction_user_auctions',
+      'page arguments' => array(1, 3),
+      'access callback' => 'uc_auction_user_auctions_perm',
+      'access arguments' => array(1),
+      'file' => 'uc_auction.user.inc',
+      'weight' => 2,
+    ),
+    'user/%user/auctions/lost' => array(
+      'title' => 'Auctions lost',
+      'type' => MENU_LOCAL_TASK,
+      'description' => 'Expired auctions bid upon but lost',
+      'page callback' => 'uc_auction_user_auctions',
+      'page arguments' => array(1, 3),
+      'access callback' => 'uc_auction_user_auctions_perm',
+      'access arguments' => array(1),
+      'file' => 'uc_auction.user.inc',
+      'weight' => 4,
+    ),
+  );
+}
+
+/**
+ * Implements hook_permission().
+ */
+function uc_auction_permission() {
+  return array(
+    'place bid' => array(
+      'title' => t('place bid'),
+      'description' => t('Users who are allowed to \'place a bid\''),
+    ),
+    'view bids' => array(
+      'title' => t('view bids'),
+      'description' => t('Users allowed to \'view bids\''),
+    ),
+    'view full bid info' => array(
+      'title' => t('view full bid info'),
+      'description' => t('Users allowed to \'view full bid info\''),
+    ),
+    'delete bids' => array(
+      'title' => t('delete bids'),
+      'description' => t('Users allowed to \'delete bids\''),
+    ),
+  );
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function uc_auction_form_alter(&$form, $form_state, $form_id) {
+  // We want to alter the form if it is of the form "foo_node_form" and foo is
+  // an Ubercart product type.
+
+  if (uc_product_is_product_form($form)) {
+
+    // This is the node editing form for an Ubercart product type. Add options
+    // to auction-ize this item.
+    $is_curr_auction = isset($form['#node']->uc_auction);
+    $is_new_auction = !isset($form['#node']->nid) && !$is_curr_auction && variable_get('uc_auction_new_default', FALSE);
+		$perfix='';
+    if (variable_get('uc_sign_after_amount', FALSE)) {
+      $prefix = '';
+      $suffix = variable_get('uc_currency_sign', '$');
+    }
+    else {
+      $prefix = variable_get('uc_currency_sign', '$');
+      $suffix = '';
+    }
+    if (isset($form['#node']->uc_auction)) {
+      $expiry = /*format_date(*/ intval($form['#node']->uc_auction['expiry'])/*, 'custom', 'r')*/;
+    }
+    else {
+      // 60s * 60m * 24h * 7d = 604800
+      $expiry = REQUEST_TIME + 604800;
+    }
+    $form['#validate'][] = 'uc_auction_form_validate';
+    $form['base']['auction'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Auction settings'),
+      '#collapsible' => TRUE,
+      '#collapsed' => !$is_curr_auction && !$is_new_auction,
+      '#weight' => $form['base']['ordering']['#weight']+1,
+      '#group' => 'additional_settings',
+      '#attributes' => array('class' => array('auction-field')),
+      '#attached' => array(
+        'js' => array(
+          'vertical-tabs' => drupal_get_path('module', 'uc_auction') . '/uc_auction_field_summary.js',
+        ),
+      ),
+      'is_auction' => array(
+        '#type' => 'checkbox',
+        '#title' => t('This is an auctioned product.'),
+        '#description' => $is_curr_auction ? t('Warning: Unchecking this box will stop this product from being auctioned and its <a href="!blink">bid history</a> will be erased.', array('!blink' => url("node/{$form['#node']->nid}/bids"))) : '',
+        '#default_value' => $is_curr_auction || $is_new_auction,
+        '#weight' => 0,
+      ),
+      'start_price' => array(
+        // This weird #type thing is explained below.
+        '#type' => $is_curr_auction ? 'value' : 'textfield',
+        '#title' => t('Starting price'),
+        '#description' => t('The first bidder will be required to place a valid bid above this initial amount. You cannot change this value while a product is being auctioned.'),
+        '#disabled' => $is_curr_auction,
+        '#default_value' => $is_curr_auction ? uc_currency_format($form['#node']->uc_auction['start_price'], FALSE) : '',
+        '#field_prefix' => $perfix,
+        '#field_suffix' => $suffix,
+        '#size' => 12,
+        '#weight' => 5,
+      ),
+      'expiry' => array(
+        '#type' => 'date_popup',
+        '#title' => t('Expiration date &amp; time'),
+        '#description' => t('Select a date and time when this auction will expire (relative to the server&rsquo;s local time).'),
+        '#default_value' => format_date($expiry, 'custom', 'Y-m-d H:i:s'),
+        '#weight' => 10,
+      ),
+    );
+    // The user can only change the start_price when a product is not currently
+    // being auctioned. The other times, we display it as a disabled textfield.
+    // However, since disabled fields are not submitted by browsers, we need
+    // to submit a value of the start_price when that is the case. If it is,
+    // then we've already given start_price a #type of 'value' above, along with
+    // other attributes which are used for textfields but not for values. Let's
+    // duplicate that to make the visible (but disabled) textfield.
+    if ($is_curr_auction) {
+      $form['base']['auction']['start_price_disp'] = $form['base']['auction']['start_price'];
+      $form['base']['auction']['start_price_disp']['#type'] = 'textfield';
+    }
+
+    if (user_access('administer store')) {
+      $incr = variable_get('uc_auction_max_increase', 1000);
+      $pctg = variable_get('uc_auction_max_increase_pctg', 100);
+      $form['base']['auction']['bid_overrides'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Bid increment and increase overrides'),
+        '#collapsible' => TRUE,
+        '#collapsed' => $is_curr_auction && $form['#node']->uc_auction['bid_increment'] === NULL && $form['#node']->uc_auction['min_increase'] === NULL && $form['#node']->uc_auction['max_increase'] === NULL && $form['#node']->uc_auction['max_increase_pctg'] === NULL,
+        '#weight' => 15,
+        'bid_overrides_desc' => array(
+          '#type' => 'markup',
+          '#weight' => 0,
+          '#value' => t('<p>Leave these fields blank to use the site-wide values as set on the the <a href="!ucasets">Ubercart Auction settings page</a>, or enter values into the fields to overwrite them on a per-product basis.</p>', array('!ucasets' => url('admin/store/settings/auction'))),
+        ),
+        'bid_increment' => array(
+          '#type' => 'textfield',
+          '#title' => t('Bid increment'),
+          '#description' => t('Site-wide configuration value: %val<br />Bids must be a multiple of this increment to be accepted. If your site is using a currency which does not have subunits in circulation (JPY, KRW), this should be an integer.', array('%val' => uc_currency_format(variable_get('uc_auction_bid_increment', .25)))),
+          '#size' => 20,
+          '#default_value' => !$is_curr_auction || $form['#node']->uc_auction['bid_increment'] === NULL ? '' : uc_currency_format($form['#node']->uc_auction['bid_increment'], FALSE, FALSE),
+          '#field_prefix' => $prefix,
+          '#field_suffix' => $suffix,
+          '#weight' => 10,
+        ),
+        'min_increase' => array(
+          '#type' => 'textfield',
+          '#title' => t('Minimum bid increase'),
+          '#description' => t('Site-wide configuration value: %val<br />New bids must be at least this much higher than the current high bid to be accepted. This value should be a multiple of the <em>Bid increment</em> value.', array('%val' => uc_currency_format(variable_get('uc_auction_min_increase', .5)))),
+          '#size' => 20,
+          '#default_value' => !$is_curr_auction || $form['#node']->uc_auction['min_increase'] === NULL ? '' : uc_currency_format($form['#node']->uc_auction['min_increase'], FALSE, FALSE),
+          '#field_prefix' => $prefix,
+          '#field_suffix' => $suffix,
+          '#weight' => 15,
+        ),
+        'max_increase' => array(
+          '#type' => 'textfield',
+          '#title' => t('Maximum bid increase'),
+          '#description' => t('Site-wide configuration value: %val<br />New bids which are this much higher than the current high bid will not be accepted. Setting a maximum bid increase stops users from placing a ridiculously high bid, either accidentally or otherwise. Enter zero to not enforce this limit. In the case that both the <em>Maximum bid increase</em> and <em>Maximum bid increase percentage</em> values are set, both limits will be enforced.', array('%val' => $incr ? uc_currency_format($incr) : t('(none)'))),
+          '#size' => 20,
+          '#default_value' => !$is_curr_auction || $form['#node']->uc_auction['max_increase'] === NULL ? '' : uc_currency_format($form['#node']->uc_auction['max_increase'], FALSE, FALSE),
+          '#field_prefix' => $prefix,
+          '#field_suffix' => $suffix,
+          '#weight' => 20,
+        ),
+        'max_increase_pctg' => array(
+          '#type' => 'textfield',
+          '#title' => t('Maximum bid increase percentage'),
+          '#description' => t('Site-wide configuration value: %val<br />Bids which increase the high bid value by this percentage will not be accepted. For example, if this value is set to 50% and an item&rsquo;s current high bid is &curren;1000, bids larger than &curren;1500 will not be accepted (as &curren;500 is 50% of &curren;1000). Setting a maximum bid increase stops users from placing a ridiculously high bid, either accidentally or otherwise. Enter zero to not enforce this limit. In the case that both the <em>Maximum bid increase</em> and <em>Maximum bid increase percentage</em> values are set, both limits will be enforced.', array('%val' => $pctg ? $pctg . '%' : t('(none)'))),
+          '#field_suffix' => t('%'),
+          '#size' => 6,
+          '#default_value' => !$is_curr_auction || $form['#node']->uc_auction['max_increase_pctg'] === NULL ? '' : $form['#node']->uc_auction['max_increase_pctg'],
+          '#weight' => 25,
+        ),
+      );
+    }
+  }
+  elseif (strpos($form_id,'uc_product_add_to_cart_form')===0) {
+    // The "Add to Cart" button.
+    if (isset($form['node']['#value']->uc_auction)) {
+      // This is an auction.
+      global $user;
+      if ($form['node']['#value']->uc_auction['high_bid_uid'] != $user->uid || REQUEST_TIME <= $form['node']['#value']->uc_auction['expiry'] || $form['node']['#value']->uc_auction['purchased']) {
+        // That ugly if clause is basically saying "if the current user is not
+        // the high bidder, OR if the auction has not expired, OR if the item
+        // has already been purchased…"
+        unset($form['actions'],$form['#submit']);
+      }
+    }
+  }
+  // For these forms whose IDs aren't going to change, we could use stand-alone
+  // hook_form_[form_id]_alter() functions, but since we already have to declare
+  // a generic hook_form_alter(), we'll just include them here.
+  elseif ($form_id === 'uc_cart_view_form' && variable_get('uc_auction_force_one', TRUE)) {
+
+    foreach ($form_state['build_info']['args'][0] as $key => $item) {
+      if ($item->is_auc) {
+        // This is a sneaky tricky dirty hack. It's waeome that it works though.
+        $form['items'][$key]['qty']['qty'] = $form['items'][$key]['qty'];
+        $form['items'][$key]['qty']['qty']['#type'] = 'value';
+        $form['items'][$key]['qty']['qty']['#value'] = $form['items'][$key]['qty']['qty']['#default_value'];
+        $form['items'][$key]['qty']['#tree'] = TRUE;
+        if (isset($form['items'][$key]['qty']['#attributes'])) {
+          $form['items'][$key]['qty']['#attributes']['disabled'] = 'disabled';
+        }
+        else {
+          $form['items'][$key]['qty']['#attributes'] = array('disabled' => 'disabled');
+        }
+      }
+    }
+  }
+  elseif ($form_id === 'uc_product_field_settings_form') {
+    // Add our own field settings to this form. If/when this form is updated to
+    // support D6 drag-and-drop reordering, this will have to be updated.
+    // Keep defaults in synch with the variable_get() in hook_nodeapi()
+    $fields = variable_get('uc_auction_field_settings', array(
+      'uc_auction_box' => array(
+        'enabled' => TRUE,
+        'weight' => -3,
+      ),
+    ));
+    $form['fields']['uc_auction_box'] = array(
+      'enabled' => array(
+        '#type' => 'checkbox',
+        '#default_value' => $fields['uc_auction_box']['enabled'],
+      ),
+      'title' => array(
+        '#type' => 'markup',
+        '#value' => t('Auction box'),
+      ),
+      'weight' => array(
+        '#type' => 'weight',
+        '#delta' => 10,
+        '#default_value' => $fields['uc_auction_box']['weight'],
+      ),
+    );
+    // Resort the list, without #properties
+    $props = array();
+    $children = array();
+    foreach ($form['fields'] as $key => $val) {
+      if (strpos($key, '#') === 0) {
+        $props[$key] = $val;
+      }
+      else {
+        $children[$key] = $val;
+      }
+    }
+    uasort($children, 'uc_weight_sort');
+    $form['fields'] = $props + $children;
+    $form['#submit'][] = 'uc_auction_field_settings_submit';
+    $form['buttons']['reset']['#submit'][] = 'uc_auction_field_settings_submit';
+  }
+}
+
+/**
+ * Validate new auction creation.
+ */
+function uc_auction_form_validate($form, &$form_state) {
+  if ($form_state['values']['is_auction']) {
+    // Check the overriden increase/increment values, if any; otherwise, load
+    // the defaults.
+    // This variable allow us to avoid possibly dividing by zero later…
+    $calc_div = FALSE;
+    if (isset($form_state['values']['bid_increment']) && $form_state['values']['bid_increment'] !== '') {
+      $bid_increment = _uc_auction_uncurrency($form_state['values']['bid_increment']);
+      if ($bid_increment <= 0) {
+        form_set_error('bid_increment', t('The <em>Bid increment</em> value must be a positive, non-zero number.'));
+      }
+      else {
+        $calc_div = TRUE;
+      }
+    }
+    else {
+      $bid_increment = variable_get('uc_auction_bid_increment', .25);
+    }
+
+    if (isset($form_state['values']['min_increase']) && $form_state['values']['min_increase'] !== '') {
+      $min_increase = _uc_auction_uncurrency($form_state['values']['min_increase']);
+      if ($min_increase <= 0) {
+        form_set_error('min_increase', t('The <em>Minimum bid increase</em> value must be a positive, non-zero number.'));
+        $calc_div = FALSE;
+      }
+      else {
+        $calc_div = TRUE;
+      }
+    }
+    else {
+      $min_increase = variable_get('uc_auction_min_increase', .5);
+    }
+
+    if ($calc_div && !_uc_auction_mod_zero($min_increase, $bid_increment)) {
+      if ($form_state['values']['bid_increment'] !== '' && $form_state['values']['min_increase'] !== '') {
+        form_set_error('bid_increment', t('The overriden <em>Minimum bid increase</em> value is not a multiple of the overriden <em>Bid increment</em> value.'));
+      }
+      elseif ($form_state['values']['bid_increment'] !== '') {
+        form_set_error('bid_increment', t('The site-wide <em>Minimum bid increase</em> value is not a multiple of the overriden <em>Bid increment</em> value.'));
+      }
+      else {
+        form_set_error('min_increase', t('The overridden <em>Minimum bid increase</em> value is not a multiple of the site-wide <em>Bid increment</em> value.'));
+      }
+    }
+
+    if (isset($form_state['values']['max_increase']) && $form_state['values']['max_increase'] !== '') {
+      $max_increase = _uc_auction_uncurrency($form_state['values']['max_increase']);
+      if ($max_increase < $min_increase) {
+        form_set_error('max_increase', t('The <em>Maximum bid increase</em> value cannot be smaller than the <em>Minimum bid increase</em> value.'));
+      }
+    }
+    else {
+      $max_increase = variable_get('uc_auction_max_increase', 1000);
+    }
+
+    if (isset($form_state['values']['max_increase_pctg']) && $form_state['values']['max_increase_pctg'] !== '') {
+      $max_increase_pctg = floatval($form_state['values']['max_increase_pctg']);
+      if ($max_increase_pctg < 0) {
+        form_set_error('max_increase_pctg', t('The <em>Maximum bid increase percentage</em> value must be a positive number.'));
+      }
+    }
+    else {
+      $max_increase_pctg = variable_get('uc_auction_max_increase_pctg', 100);
+    }
+
+    //Now verify all the normal stuff.
+    // Check auction expiry time.
+    $end_time = strtotime($form_state['values']['expiry']);
+    if (!$end_time) {
+      form_set_error('expiry', t('The auction expiration date &amp; time is invalid.'));
+    }
+    elseif ($end_time < REQUEST_TIME) {
+      $form_state['values']['expiry'] = format_date($end_time, 'short');
+      form_set_error('expiry', t('The auction expiration date &amp; time should be in the future.'));
+    }
+    else {
+      $form_state['values']['expiry_ts'] = $end_time;
+    }
+    $start = _uc_auction_uncurrency($form_state['values']['start_price']);
+    if ($form_state['values']['start_price'] === '') {
+      form_set_error('start_price', t('If you are going to create an auction, you must specify a start price.'));
+    }
+    elseif ($start !== 0) {
+      // We're allowing a start price of 0 to be automatically considered sane.
+      // That way people can make it so the value of the first bid will be equal
+      // to the bid increment value.
+      // Check that the starting value is sane otherwise.
+      // Is it a multiple of the bid increment value?
+      if (!_uc_auction_mod_zero($start)) {
+        form_set_error('start_price', t('The start price for this auctioned item should be a multiple of the <em>Bid increment</em> value, which is @inc. Try using @price instead. You may change the <em>Bid increment</em> value on the <em><a href="@aucset">Auction settings</a></em> page.', array('@inc' => uc_currency_format($bid_increment), '@price' => uc_currency_format(ceil($start / $bid_increment) * $bid_increment), '@aucset' => url('admin/store/settings/auction'))));
+      }
+      // Are things configured such that, with this price, the minimum bid will be
+      // higher than the maximum bid? In testing, a case occurred where the
+      // minimum bid value was larger than the maximum bid value; the minimum bid
+      // increase was $0.50 and the maximum bid increase was 100% or $1000, but
+      // the starting price of the product was $0.20. The result was a minimum bid
+      // value of $0.70 but a maximum bid value of $0.40.
+      $min_bid = $start + $min_increase;
+      if ($max_increase_pctg) {
+        // Ignore this if the percentage is 0 anyway
+        $max_bid_pctg = $start * (($max_increase_pctg / 100) + 1);
+        // I don't think this is possible to be higher - but we'll check it anyway
+        $max_bid_flat = $start + $max_increase;
+        $max_bid = min($max_bid_pctg, $max_bid_flat);
+        if ($min_bid > $max_bid) {
+          form_set_error('start_price', t('The start price for this auctioned item is low enough that the minimum bid price (@min) is higher than the maximum bid price (@max). You may need to adjust the site-wide or per-product <em><a href="@aucset">Auction settings</a></em>, if you have permission to do so, so that this problem does not occur.', array('@min' => uc_currency_format($min_bid), '@max' => uc_currency_format($max_bid), '@aucset' => url('admin/store/settings/auction'))));
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Save or delete the field settings per the user's request.
+ */
+function uc_auction_field_settings_submit($form, &$form_state) {
+  if ($form_state['values']['op'] === t('Reset to defaults')) {
+    variable_del('uc_auction_field_settings');
+  }
+  else {
+    variable_set('uc_auction_field_settings', array(
+      'uc_auction_box' => $form_state['values']['fields']['uc_auction_box'],
+    ));
+  }
+}
+
+function uc_auction_node_validate($node,$form,&$form_state){
+  if (isset($node->is_auction) && $node->is_auction) {
+    // This will be an auction. Save the expiry info for later.
+    $expiry = strtotime($node->expiry);
+    $sell = _uc_auction_uncurrency($node->start_price);
+  }
+  else {
+    $expiry = NULL;
+    $sell = FALSE;
+  }
+}
+function uc_auction_node_insert($node){
+  if(isset($node->is_auction) && $node->is_auction){
+    // This is an auction. Write the info to uc_auctions.
+    $record = array(
+      'nid' => $node->nid,
+      'expiry' => strtotime($node->expiry),
+      'start_price' => $node->start_price,
+      'bid_increment' => isset($node->bid_increment) && $node->bid_increment !== '' ? _uc_auction_uncurrency($node->bid_increment) : NULL,
+      'min_increase' => isset($node->min_increase) && $node->min_increase !== '' ? _uc_auction_uncurrency($node->min_increase) : NULL,
+      'max_increase' => isset($node->max_increase) && $node->max_increase !== '' ? _uc_auction_uncurrency($node->max_increase) : NULL,
+      'max_increase_pctg' => isset($node->max_increase_pctg) && $node->max_increase_pctg !== '' ? floatval($node->max_increase_pctg) : NULL,
+    );
+    // Invoke hook_auc_create(&$node, &$record, $new)
+    module_invoke_all('auc_create', $node, $record, TRUE);
+    drupal_write_record('uc_auction', $record);
+  }
+}
+
+function uc_auction_node_update($node){
+  // Did we do the validation above?
+  if (isset($node->is_auction)){
+    $prev_expiry = db_query('SELECT expiry FROM {uc_auction} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField();
+    if ($prev_expiry) {
+      // This is a previously-existing auction. Are we baleeting it?
+      if ($node->is_auction && $node->original->uc_auction['expiry'] !== NULL) {
+        // This is a previously-existing auction with an updating expiry
+        // time.
+        $record = array(
+          'nid' => $node->nid,
+          'expiry' => strtotime($node->expiry),
+          'bid_increment' => isset($node->bid_increment) && $node->bid_increment !== '' ? _uc_auction_uncurrency($node->bid_increment) : NULL,
+          'min_increase' => isset($node->min_increase) && $node->min_increase !== '' ? _uc_auction_uncurrency($node->min_increase) : NULL,
+          'max_increase' => isset($node->max_increase) && $node->max_increase !== '' ? _uc_auction_uncurrency($node->max_increase) : NULL,
+          'max_increase_pctg' => isset($node->max_increase_pctg) && $node->max_increase_pctg !== '' ? floatval($node->max_increase_pctg) : NULL,
+        );
+
+        // Invoke hook_auc_update(&$node, &$record).
+        module_invoke_all('auc_update', $node, $record);
+        // drupal_write_record('uc_auction', $record, 'nid');
+        // We can't use drupal_write_record() here because it doesn't support
+        // NULL values: http://drupal.org/node/227677 - Damn!
+        unset($record['nid']);
+
+        db_update('uc_auction')->fields($record)->condition('nid',$node->nid)->execute();
+
+      }
+      elseif (!$node->is_auction && isset($node->original->uc_auction)) {
+        db_delete('uc_auction')->condition('nid', $node->nid)->execute();
+        db_delete('uc_auction_bids')->condition('nid', $node->nid)->execute();
+        // Invoke hook_auc_remove($node, $deletion).
+        module_invoke_all('auc_remove', $node, FALSE);
+      }
+    }
+    else {
+      // This is a previously-existing product which is becoming an auction.
+      $record = array(
+        'nid' => $node->nid,
+        'expiry' => strtotime($node->expiry),
+        'start_price' => $node->start_price,
+        'bid_increment' => isset($node->bid_increment) && $node->bid_increment !== '' ? _uc_auction_uncurrency($node->bid_increment) : NULL,
+        'min_increase' => isset($node->min_increase) && $node->min_increase !== '' ? _uc_auction_uncurrency($node->min_increase) : NULL,
+        'max_increase' => isset($node->max_increase) && $node->max_increase !== '' ? _uc_auction_uncurrency($node->max_increase) : NULL,
+        'max_increase_pctg' => isset($node->max_increase_pctg) && $node->max_increase_pctg !== '' ? floatval($node->max_increase_pctg) : NULL,
+      );
+      // Invoke hook_auc_create(&$node, &$record, $new)
+      module_invoke_all('auc_create', $node, $record, FALSE);
+      drupal_write_record('uc_auction', $record);
+    }
+  }
+}
+
+function uc_auction_node_delete($node){
+  db_delete('uc_auction')->condition('nid', $node->nid)->execute();
+  db_delete('uc_auction_bids')->condition('nid', $node->nid)->execute();
+  module_invoke_all('auc_remove', $node, TRUE);
+}
+
+function uc_auction_node_load($nodes,$types){
+  foreach($nodes as $node){
+    // Okay. It would be awesome to do this in a single query, like:
+    //   SELECT ua.*, uab.uid AS high_bid_uid, uab.amount AS high_bid_amt,
+    //   COUNT(uab.bid) AS bid_count FROM {uc_auction} ua LEFT JOIN
+    //   {uc_auction_bids} uab ON ua.nid = uab.nid GROUP BY uab.nid ORDER BY
+    //   uab.time DESC
+    // …and this ALMOST works, but inexplicably the high_bid_uid and
+    // high_bid_amt values are set to the FIRST bid, not the most recent or
+    // highest (the ORDER BY clause is seemingly being ignored), in MySQL
+    // anyway (lowest common denominator, I know). If anyone smarter than me
+    // can figure out how to do this without a subquery, enlighten me. For
+    // now;
+    if ($auc = db_query('SELECT ua.*, uab.uid AS high_bid_uid, uab.amount AS high_bid_amt, (SELECT COUNT(*) FROM {uc_auction_bids} WHERE nid = :nid) as bid_count FROM {uc_auction} ua LEFT JOIN {uc_auction_bids} uab ON ua.high_bid = uab.bid WHERE ua.nid = :nid', array(':nid' => $node->nid))->fetchAssoc()) {
+      foreach (array('start_price', 'bid_increment', 'min_increase', 'max_increase', 'max_increase_pctg') as $key) {
+        if ($auc[$key] !== NULL) {
+          $auc[$key] = floatval($auc[$key]);
+        }
+      }
+
+      if (!$auc['high_bid']) {
+        $auc['high_bid_amt'] = $auc['start_price'];
+      }
+
+      // We're calculating these bid limits here so that other modules can
+      // override them in their on hook_nodeapi()s later.
+      $auc['min_bid'] = $auc['high_bid_amt'] + ($auc['min_increase'] !== NULL ? $auc['min_increase'] : variable_get('uc_auction_min_increase', .5));
+      if (!isset($auc['max_inc']) ||  $auc['max_inc']=== NULL) {
+        $auc['max_inc'] = variable_get('uc_auction_max_increase', 1000);
+      }
+      if (!isset($auc['max_inc_pctg']) ||  $auc['max_inc_pctg'] === NULL) {
+        $auc['max_inc_pctg'] = variable_get('uc_auction_max_increase_pctg', 100);
+      }
+
+      // A max_bid of 0 means no limit
+      $auc['max_bid'] = 0;
+
+      if ($auc['max_increase']) {
+        $auc['max_bid'] = $auc['high_bid_amt'] + $auc['max_increase'];
+      }
+
+      if ($auc['max_increase_pctg'] && $auc['high_bid_amt'] > 0) {
+        // Percentage math. Funky. On zero, it will always equal zero, so skip it
+        // in that case.
+        $max_inc_pctg_appl = $auc['high_bid_amt'] * (($auc['max_increase_pctg'] / 100) + 1);
+        // If $max_bid is still 0 OR this value is less than the current $max_bid…
+        if (!$auc['max_bid'] || $max_inc_pctg_appl < $auc['max_bid']) {
+          $auc['max_bid'] = $max_inc_pctg_appl;
+        }
+      }
+
+
+      $node->uc_auction = $auc;
+    }
+  }
+}
+
+function uc_auction_node_view($node, $view_mode, $langcode){
+  if(isset($node->uc_auction)){
+    // Keep defaults in synch with the variable_get() in hook_form_alter()
+    $fields = variable_get('uc_auction_field_settings', array(
+      'uc_auction_box' => array(
+        'enabled' => TRUE,
+        'weight' => -3,
+      ),
+    ));
+
+    if ($fields['uc_auction_box']['enabled']) {
+      $node->content['uc_auction'] = drupal_get_form('uc_auction_bid_table_form', $node, $view_mode);
+      $node->content['uc_auction']['#weight'] = $fields['uc_auction_box']['weight'];
+    }
+    if (variable_get('uc_auction_hide_prices', TRUE)) {
+      unset($node->content['display_price']);
+      unset($node->content['list_price']);
+      unset($node->content['sell_price']);
+    }
+    if ($view_mode=='full') {
+      // Check to see if the user has bid on this in the past
+      global $user;
+      if (db_query('SELECT nid FROM {uc_auction_bids} WHERE nid = :nid && uid = :uid', array(':nid' => $node->nid, ':uid' => $user->uid))->fetchField()) {
+        $message = NULL;
+        $type = 'status';
+        $result = module_invoke_all('auc_message', $node);
+        if (!in_array(FALSE, $result, TRUE)) {
+          if ($node->uc_auction['bid_count'] && $node->uc_auction['high_bid_uid'] == $user->uid) {
+            if (REQUEST_TIME >= $node->uc_auction['expiry']) {
+              if ($node->uc_auction['purchased']) {
+                drupal_set_message(t('You have purchased this auction item.'));
+              }
+              else {
+                drupal_set_message(t('Congratulations! You have won the auction for this item.'));
+              }
+            }
+            else {
+              drupal_set_message(t('Congratulations. You are currently the high bidder for this item.'));
+            }
+          }
+          else {
+            if (REQUEST_TIME > $node->uc_auction['expiry']) {
+              drupal_set_message(t('This auction has expired, and you were not the final bidder. Better luck next time!'), 'warning');
+            }
+            else {
+              drupal_set_message(t('You are no longer the high bidder for the item. You must place a higher bid if you wish to win this auction.'), 'warning');
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function uc_auction_theme($existing, $type, $theme, $path) {
+  return array(
+    'uc_auction_bid_table' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_attach_form().
+ */
+function uc_auction_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode) {
+  if ($entity_type == 'user' && variable_get('uc_auction_notify_outbid', TRUE)) {
+    $form['uc_auction_settings'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Auction settings'),
+      '#weight' => 4,
+      'uc_auction_notify_outbid' => array(
+        '#type' => 'checkbox',
+        '#title' => t('Notify me by e-mail when I&rsquo;m outbid on an auction.'),
+        '#default_value' => isset($entity->data['uc_auction_notify_outbid']) ? $entity->data['uc_auction_notify_outbid'] : TRUE,
+       ),
+    );
+  }
+}
+
+function uc_auction_user_presave(&$edit, $account, $category){
+  if (isset($edit['uc_auction_notify_outbid'])) {
+    $edit['data']['uc_auction_notify_outbid'] = $edit['uc_auction_notify_outbid'];
+  }
+}
+
+/**
+ * Implements hook_cron(). ().
+ */
+function uc_auction_cron() {
+  $time = REQUEST_TIME;
+  // Find all the auctions which have been won recently.
+  $nids = db_query('SELECT nid FROM {uc_auction} WHERE notified = :notified && expiry < :expiry', array(':notified' => 0, ':expiry' => $time));
+  foreach($nids as $nid ) {
+    // Invoke hook_auc_expired(). We're only going to pass the nid and
+    // not the actual node because there's no use loading the node if there's
+    // not actually any hooks implemented and notifications are turned off.
+    module_invoke_all('auc_expired', $nid->nid);
+    // On the other hand, if notifications *are* enabled…
+    if (variable_get('uc_auction_notify_win', TRUE)) {
+      // …we need to do some loading.
+      $node = node_load($nid->nid);
+      $high_user = user_load($node->uc_auction['high_bid_uid']);
+      if ($high_user->uid) {
+        drupal_mail('uc_auction', 'uc_auction_notify_win', $high_user->mail, user_preferred_language($high_user), array('node' => $node, 'user' => $high_user));
+        watchdog('uc auction', 'Auction won notification for !item sent to @user.', array('@user' => $high_user->name, '!item' => l($node->title, "node/{$node->nid}")));
+      }
+      else {
+        watchdog('uc auction', 'Auction for !item expired; no or anonymous winner. No notification sent.', array('!item' => l($node->title, "node/{$node->nid}")));
+      }
+    }
+  }
+  // Set all as having been notified. Note that we're setting this value even if
+  // won auction notifications are disabled. That way, if they're enabled in the
+  // future, people who have won auctions in the past won't suddenly receive
+  // notifications about it. Also, we'll know that we've already called the
+  // expired hook on it.
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query('UPDATE {uc_auction} SET notified = 1 WHERE notified = 0 && expiry < %d', $time) */
+  db_update('uc_auction')
+  ->fields(array(
+    'notified' => 1,
+  ))
+  ->condition('notified', 0)
+  ->condition('expiry', $time, '<')
+  ->execute();
+}
+
+/**
+ * Implements hook_mail().
+ */
+function uc_auction_mail($key, &$message, $params) {
+  if ($key === 'uc_auction_notify_win') {
+    // The "you've won an auction" notification
+    $message['body'] = token_replace(
+      variable_get('uc_auction_notify_win_msg', uc_get_message('uc_auction_notify_win_msg')),
+      array('global' => NULL, 'node' => $params['node'], 'auction' => $params['node'])
+    );
+	// DefaultMailSystem expects an array with paragraphs
+	$message['body'] = explode("\n\n", $message['body']);
+    $message['subject'] = token_replace(
+      variable_get('uc_auction_notify_win_subj', uc_get_message('uc_auction_notify_win_subj')),
+      array('global' => NULL, 'node' => $params['node'], 'auction' => $params['node'])
+    );
+  }
+  elseif ($key === 'uc_auction_notify_outbid') {
+    // The "you were outbid" notification
+    $message['body'] = token_replace(
+      variable_get('uc_auction_notify_outbid_msg', uc_get_message('uc_auction_notify_outbid_msg')),
+      array('global' => NULL, 'node' => $params['node'], 'auction' => $params['node'])
+    );
+	// DefaultMailSystem expects an array with paragraphs
+	$message['body'] = explode("\n\n", $message['body']);
+    $message['subject'] = token_replace(
+      variable_get('uc_auction_notify_outbid_subj', uc_get_message('uc_auction_notify_outbid_subj')),
+      array('global' => NULL, 'node' => $params['node'], 'auction' => $params['node'])
+    );
+  }
+}
+
+/* drupal_get_form() callbacks ********************************************** */
+
+/**
+ * Describe the bid form table.
+ *
+ * This produces a table with basic information about the auctioned item
+ * (current high bid, number of bids, time left before/after expiry). If the
+ * node is not being viewed as a teaser, it also adds JavaScript to count down
+ * the remaining time (if so configured) and adds controls users will use to
+ * place a bid, if they have permission to do so.
+ *
+ * @param $form_state
+ *   The obligatory $form_state parameter.
+ * @param $node
+ *   The node object to build a form for.
+ * @param $teaser
+ *   Are we looking at a teaser?
+ * @return
+ *   The form array.
+ */
+function uc_auction_bid_table_form($form, &$form_state, $node, $teaser) {
+
+  $form = array(
+    '#node' => $node,
+    '#teaser' => $teaser,
+    '#theme' => 'uc_auction_bid_table',
+    'nid' => array(
+      '#type' => 'value',
+      '#value' => $node->nid,
+    ),
+    'bid_count' => array(
+      '#title' => t('Bids'),
+      '#type' => 'item',
+      '#markup' => user_access('view bids') ? l($node->uc_auction['bid_count'], "node/{$node->nid}/bids", array('title' => t('See bid history for this item'))) : $node->uc_auction['bid_count'],
+      '#weight' => 0,
+    ),
+    'high_bid' => array(
+      '#title' => t('High bid'),
+      '#type' => 'item',
+      '#markup' => $node->uc_auction['bid_count'] ? uc_currency_format($node->uc_auction['high_bid_amt']) : uc_currency_format($node->uc_auction['start_price']),
+      '#weight' => 2,
+    ),
+  );
+  $time = REQUEST_TIME;
+  if ($node->uc_auction['expiry'] >= $time) {
+    $open = TRUE;
+    $in = $node->uc_auction['expiry'] - $time;
+    $form['expiry'] = array(
+      '#title' => t('Expires in'),
+      '#type' => 'item',
+      '#markup' => format_interval($in, variable_get('uc_auction_time_gran', 2)),
+      '#weight' => 4,
+    );
+    if ($in < 60) {
+      // This minute
+      $form['expiry']['#attributes'] = array('class' => 'uc-auction-expiry-min');
+    }
+    elseif ($in < 3600) {
+      // This hour
+      $form['expiry']['#attributes'] = array('class' => 'uc-auction-expiry-hour');
+    }
+    elseif ($in < 86400) {
+      // In 24 h
+      $form['expiry']['#attributes'] = array('class' => 'uc-auction-expiry-day');
+    }
+  }
+  else {
+    $open = FALSE;
+    $form['expiry'] = array(
+      '#title' => t('Expired'),
+      '#type' => 'item',
+      '#markup' => t('@time ago', array('@time' => format_interval($time - $node->uc_auction['expiry'], variable_get('uc_auction_time_gran', 2)))),
+      '#attributes' => array('class' => 'uc-auction-expiry-expired'),
+      '#weight' => 4,
+    );
+  }
+  if ($open && $teaser=='full') {
+    // The user can place a bid.
+
+    $form['max_bid'] = array(
+      '#type' => 'value',
+      '#value' => $node->uc_auction['max_bid'],
+    );
+    $form['bid_increment'] = array(
+      '#type' => 'value',
+      '#value' => $node->uc_auction['bid_increment'] === NULL ? variable_get('uc_auction_bid_increment', .25) : $node->uc_auction['bid_increment'],
+    );
+
+    drupal_add_js(array(
+      'ucAuction' => array(
+        'minBid' => $node->uc_auction['min_bid'],
+        'minBidF' => uc_currency_format($node->uc_auction['min_bid']),
+        'maxBid' => $node->uc_auction['max_bid'],
+        'maxBidF' => uc_currency_format($node->uc_auction['max_bid']),
+        // The NoSign values will be filled in to the bid value field if the
+        // user tries to surpass one of those limits.
+        'minBidFNoSign' => uc_currency_format($node->uc_auction['min_bid'], FALSE),
+        'maxBidFNoSign' => uc_currency_format($node->uc_auction['max_bid'], FALSE),
+        'bidIncrement' => $form['bid_increment']['#value'],
+        'bidIncrementF' => uc_currency_format($form['bid_increment']['#value']),
+        // JavaScript wants to use milliseconds for its time functions, but if
+        // we try to just set the expiry as $node->uc_auction['expiry'] * 1000,
+        // the time comes out on the JS end in exponential notation, which is
+        // not what we want. (Or, at least, that's what's happening on my local
+        // machine at work.) So we're going to pass it as a normal Unix
+        // timestamp in seconds and do the conversion to milliseconds on the JS
+        // side.
+        // Oh yeah… let's try to convert it to UTC too.
+        'expiry' => $node->uc_auction['expiry'] + variable_get('date_default_timezone', 0),
+        'timeGran' => intval(variable_get('uc_auction_time_gran', 2)),
+        'doCountdown' => variable_get('uc_auction_countdown', TRUE),
+        'currencyDec' => variable_get('uc_currency_dec', '.'),
+        'currencyThou' => variable_get('uc_currency_thou', ','),
+      ),
+    ), array('type' => 'setting', 'scope' => JS_DEFAULT));
+    drupal_add_js(drupal_get_path('module', 'uc_auction') . '/uc_auction.timers.js', array('scope' => 'footer'));
+    drupal_add_js(drupal_get_path('module', 'uc_auction') . '/uc_auction.js', array('scope' => 'footer'));
+    // @TODO: The below is important and deserves review
+    global $user;
+    if (user_access('place bid')) {
+      if ($node->uc_auction['bid_count'] && $user->uid == $node->uc_auction['high_bid_uid']) {
+        $form['cant_bid'] = array(
+          '#type' => 'item',
+          '#description' => t('You are the current high bidder on this item. You may not place a bid against yourself.'),
+          '#weight' => 6,
+        );
+      }
+      elseif ($user->uid == $node->uid) {
+        $form['cant_bid'] = array(
+          '#type' => 'item',
+          '#description' => t('You may not bid on your own items.'),
+          '#weight' => 6,
+        );
+      }
+      else {
+        $form['user_bid'] = array(
+          '#title' => t('Bid value'),
+          '#type' => 'textfield',
+          '#size' => 12,
+          '#weight' => 6,
+        );
+        if (variable_get('uc_sign_after_amount', FALSE)) {
+          $form['user_bid']['#field_suffix'] = variable_get('uc_currency_sign', '$');
+        }
+        else {
+          $form['user_bid']['#field_prefix'] = variable_get('uc_currency_sign', '$');
+        }
+        $form['submit'] = array(
+          '#type' => 'submit',
+          '#value' => t('Place bid'),
+          '#description' => t('You must bid at least @minbid<br />in increments of @inc', array('@minbid' => uc_currency_format($node->uc_auction['min_bid']), '@inc' => uc_currency_format($form['bid_increment']['#value']))),
+          '#weight' => 8,
+        );
+      }
+    }
+    elseif (!$user->uid) {
+      // User doesn't have 'place bid' permission. The below message isn't
+      // entirely accurate since it's not guaranteed they will be given this
+      // permission if they log in, but whatcha gonna do?
+      $form['cant_bid'] = array(
+        '#type' => 'item',
+        '#description' => t('<a href="@log-in">Log in</a> or <a href="@reg">register</a> to place a bid.', array('@log-in' => url('user/login', array('query' => array('destination' => 'node/' . $node->nid))), '@reg' => url('user/register', array('query' => array('destination' => 'node/' . $node->nid))))),
+      );
+    }
+  }
+  return $form;
+}
+
+/**
+ * Theme the bid table.
+ *
+ * @param $form
+ *   The form to theme.
+ * @returr
+ *   The themed form.
+ */
+function theme_uc_auction_bid_table($variables) {
+  $form = $variables['form'];
+  drupal_add_css(drupal_get_path('module', 'uc_auction') . '/uc_auction.css');
+  // This will all make sense in a minute.
+	$sp_t='';
+	if(isset($form['start_price'])){
+		$sp_t = $form['start_price']['#title'];
+		unset($form['start_price']['#title']);
+	}
+  $bc_t = $form['bid_count']['#title'];
+  unset($form['bid_count']['#title']);
+  $hb_t = $form['high_bid']['#title'];
+  unset($form['high_bid']['#title']);
+  $ex_t = $form['expiry']['#title'];
+  unset($form['expiry']['#title']);
+  if (isset($form['user_bid'])) {
+    $ub_t = $form['user_bid']['#title'];
+    unset($form['user_bid']['#title']);
+  }
+  $rows = array(
+    array(// tr
+      array(// th
+        'header' => TRUE,
+        'data' => $hb_t,
+        'class' => 'uc-auction-high-bid-hdr',
+      ),
+      array(// td
+        'data' => $form['high_bid'],
+        'class' => 'uc-auction-high-bid display_price',
+      ),
+    ),
+    array(// tr
+      array(// th
+        'header' => TRUE,
+        'data' => $bc_t,
+        'class' => 'uc-auction-bid-count-hdr',
+      ),
+      array(// td
+        'data' => $form['bid_count'],
+        'class' => 'uc-auction-bid-count',
+      ),
+    ),
+    array(// tr
+      array(// th
+        'header' => TRUE,
+        'data' => $ex_t,
+        'class' => 'uc-auction-expiry-hdr',
+      ),
+      array(// td
+        'data' => $form['expiry'],
+        'class' => count($form['expiry']['#attributes']) ? 'uc-auction-expiry ' . implode(' ', $form['expiry']['#attributes']) : 'uc-auction-expiry',
+      ),
+    ),
+  );
+  if (isset($form['user_bid'])) {
+    $rows[] = array(// tr
+      array(// th
+        'header' => TRUE,
+        'data' => $ub_t,
+        'class' => 'uc-auction-user-bid-hdr',
+      ),
+      array(// td
+        'data' => $form['user_bid'],
+        'class' => 'uc-auction-user-bid',
+      ),
+    );
+    $rows[] = array(// tr
+      array(// td
+        'data' => array($form['submit'],$form['form_build_id'],$form['form_token'],$form['form_id'],array('#name'=>'desc','#markup'=>'<div class="description">' . $form['submit']['#description'] . '</div>')),
+        'class' => 'uc-auction-user-bid-submit',
+        'colspan' => 2,
+      ),
+    );
+  }
+  elseif (isset($form['cant_bid'])) {
+    $rows[] = array(// tr
+      array(// td
+        'data' => $form['cant_bid'],
+        'class' => 'uc-auction-user-bid-submit',
+        'colspan' => 2,
+      ),
+    );
+  }
+  return theme('table', array('header' => array(), 'rows' => $rows, 'attributes' => array('class' => 'uc-auction-bid-table')));
+}
+
+/**
+ * Validate placed bids.
+ */
+function uc_auction_bid_table_form_validate($form, &$form_state) {
+  // TODO: Check that the submitted bid value will fit in the DB?
+  $form_state['values']['user_bid'] = _uc_auction_uncurrency($form_state['values']['user_bid']);
+  $node = node_load($form_state['values']['nid']);
+  // Note that these checks were made client-side if the user has JavaScript
+  // enabled, but relying on client-side checks is dee-you-double-em dumb.
+  // Is the bid value above the minimum value?
+  if (REQUEST_TIME > $node->uc_auction['expiry']) {
+    form_set_error('submit', t('Sorry, but this auction has expired. You may no longer place bids on this item.'));
+  }
+  // Is the bid value below the minimum bid value?
+  elseif ($form_state['values']['user_bid'] < $node->uc_auction['min_bid']) {
+    form_set_error('user_bid', t('The current minimum bid value is %val.', array('%val' => uc_currency_format($node->uc_auction['min_bid']))));
+  }
+  // Is the bid value above the maximum bid value? Note that if max_bid is zero,
+  // we're ignoring this check.
+  elseif ($form_state['values']['max_bid'] && $form_state['values']['user_bid'] > $form_state['values']['max_bid']) {
+    form_set_error('user_bid', t('The current maximum bid value is %val.', array('%val' => uc_currency_format($form_state['values']['max_bid']))));
+  }
+  // Is the bid value a multiple of the bid increment value?
+  elseif (!_uc_auction_mod_zero($form_state['values']['user_bid'], $form_state['values']['bid_increment'])) {
+    form_set_error('user_bid', t('Your bid must be a a multiple of @inc to be accepted. Try bidding @bid instead.', array('@inc' => uc_currency_format($form_state['values']['bid_increment']), '@bid' => uc_currency_format(ceil($form_state['values']['user_bid'] / $form_state['values']['bid_increment']) * $form_state['values']['bid_increment']))));
+  }
+}
+
+/**
+ * Submit placed bids.
+ */
+function uc_auction_bid_table_form_submit($form, &$form_state) {
+  global $user;
+  // Prepare stuff to be potentially altered, then saved
+  $node = node_load($form_state['values']['nid']);
+  $bid_record = array(
+    'nid' => $form_state['values']['nid'],
+    'uid' => $user->uid,
+    'time' => REQUEST_TIME,
+    'amount' => $form_state['values']['user_bid'],
+  );
+  $outbid = $node->uc_auction['high_bid_uid'];
+  // Invoke hook_uc_auction_accept_bid(&$node, &$bid_record)
+  $response = module_invoke_all('bid_alter', $node, $bid_record);
+  // If any of the hook functions returned false, we're not going to save the
+  // data to the database OR send the outgoing mail notification.
+  if (!in_array(FALSE, $response)) {
+    uc_auction_insert_bid($bid_record);
+    // Do we want to notify the outbid user?
+    if (variable_get('uc_auction_notify_outbid', TRUE) && $outbid != 0) {
+      // TODO Convert "user_load" to "user_load_multiple" if "$outbid" is other than a uid.
+      // To return a single user object, wrap "user_load_multiple" with "array_shift" or equivalent.
+      // Example: array_shift(user_load_multiple(array(), $outbid))
+      $outbid_user = user_load($outbid);
+      if (!isset($outbid_user->data['uc_auction_notify_outbid']) || $outbid_user->data['uc_auction_notify_outbid']) {
+        $node->uc_auction['high_bid_amt'] = $form_state['values']['user_bid'];
+        drupal_mail('uc_auction', 'uc_auction_notify_outbid', $outbid_user->mail, user_preferred_language($outbid_user), array('node' => $node, 'user' => $outbid_user));
+        watchdog('uc auction', 'Outbid notification for !item sent to @user.', array('@user' => $outbid_user->name, '!item' => l($node->title, "node/{$node->nid}")));
+      }
+    }
+  }
+}
+
+/**
+ * Properly inserts bids into the database.
+ *
+ * Note that this function does NOT do any validation. Data should be validated
+ * to assure that the user is capable of placing this bid before it is passed
+ * to this function.
+ *
+ * @param $bid_record
+ *   An array primed to be inserted into the bid database via
+ *   drupal_write_record().
+ * @param $auc_record
+ *   An optional array of values to be updated on the auction record.
+ */
+function uc_auction_insert_bid($bid_record, $auc_record = array()) {
+  drupal_write_record('uc_auction_bids', $bid_record);
+  $auc_record += array(
+    'nid' => $bid_record['nid'],
+    'high_bid' => $bid_record['bid'],
+  );
+  drupal_write_record('uc_auction', $auc_record, 'nid');
+}
+
+/**
+ * Confirm bid deletion.
+ *
+ * Bids are identified by the nid of the node the bid is on, and the timestamp
+ * of the bid. Since it's entirely possible for two bids for the same product to
+ * have been accepted within the same second, this code fails it. We're going to
+ * have to add a serial number for bids.
+ *
+ * @param $node
+ *   The node object whose bid(s) will be deleted.
+ * @param $ts
+ *   The timestamp of the bid to be deleted.
+ * @return
+ *   The confirmation form to delete the bids.
+ */
+function uc_auction_bid_del_conf($form, &$form_state, $node, $bid) {
+  $form = array(
+    'nid' => array(
+      '#type' => 'value',
+      '#value' => $node->nid,
+    ),
+    'bid' => array(
+      '#type' => 'value',
+      '#value' => $bid,
+    ),
+  );
+  return confirm_form($form, t('Are you sure you want to delete those bids?'), "node/{$node->nid}/bids");
+}
+
+/**
+ * Delete bids.
+ */
+function uc_auction_bid_del_conf_submit($form, &$form_state) {
+  // Find out the bid IDs of the bids to be baleeted.
+  $to_delete = array();
+  $rez = db_query('SELECT bid FROM {uc_auction_bids} WHERE nid = :nid && bid >= :bid', array(':nid' => $form_state['values']['nid'], ':bid' => $form_state['values']['bid']));
+  while ($bid = $rez->fetchAssoc()) {
+    $to_delete[] = intval($bid['bid']);
+  }
+  $node = node_load($form_state['values']['nid']);
+  // Call hook_delete_bids
+  $response = module_invoke_all('delete_bids', $node, $to_delete);
+  if (!in_array(FALSE, $response)) {
+    // This sucks, but if I try to do something like
+    // array($node->nid) + $to_delete values get overwritten and stuff.
+    $params = $to_delete;
+    array_unshift($params, $node->nid);
+    // Delete bids from the DB
+    // TODO Please convert this statement to the D7 database API syntax.
+    db_query('DELETE FROM {uc_auction_bids} WHERE nid = :nid and bid IN (:to_delete)', array(':nid'=>$params[0],':to_delete'=>$to_delete));
+
+    // Are there any bids left?
+    $max = db_query('SELECT MAX(bid) AS bid FROM {uc_auction_bids} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField();
+
+    // Update uc_auction
+    $auc_record = array(
+      'nid' => $node->nid,
+      'high_bid' => $max['bid'],
+      // $max['bid'] may be FALSE, which will be inserted as 0 (which is what we
+      // want).
+    );
+    drupal_write_record('uc_auction', $auc_record, 'nid');
+    drupal_set_message(t('The bids were deleted and the high bid price was reset to the latest undeleted bid (or the initial start price if all bids were deleted).'));
+  }
+  drupal_goto("node/{$form_state['values']['nid']}/bids");
+}
+
+/* Menu callbacks *********************************************************** */
+
+/**
+ * More menu callbacks in uc_auction.admin.inc and uc_auction.user.inc!
+ */
+
+/**
+ * List bids.
+ * @param $node
+ *   The product to show bids for.
+ * @return
+ *   A themed table of bids.
+ */
+function uc_auction_bid_history($node) {
+  $rows = array();
+  $del = user_access('delete bids');
+  $full = user_access('view full bid info');
+  $rez = db_query('SELECT * FROM {uc_auction_bids} WHERE nid = :nid', array(':nid' => $node->nid));
+  global $user;
+  while ($bid = $rez->fetchAssoc()) {
+    if ($bid['uid'] == $user->uid) {
+      $row = array(theme('username', array('account' => $user)));
+    }
+    elseif ($full) {
+      // TODO Convert "user_load" to "user_load_multiple" if "$bid['uid']" is other than a uid.
+      // To return a single user object, wrap "user_load_multiple" with "array_shift" or equivalent.
+      // Example: array_shift(user_load_multiple(array(), $bid['uid']))
+      $row = array(theme('username', array('account' => user_load($bid['uid']))));
+    }
+    else {
+      $row = array(t('<em>Anonymized bidder</em>'));
+    }
+    $row[] = t('@time ago', array('@time' => format_interval(REQUEST_TIME - $bid['time'], variable_get('uc_auction_time_gran', 2))));
+    $row[] = uc_currency_format($bid['amount']);
+    if ($del) {
+      $row[] = l(t('Delete this and later bids'), "node/{$node->nid}/bids/delete/{$bid['bid']}");
+    }
+    $rows[] = $row;
+  }
+  if (count($rows) === 0) {
+    $rows[] = array(
+      array(
+        'data' => t('No bids have been placed on this product.'),
+        'colspan' => $del ? 4 : 3,
+      ),
+    );
+  }
+  $header = array(t('User'), t('Time'), t('Bid'));
+  if ($del) {
+    $header[] = t('Delete bids');
+  }
+  return theme('table', array('header' => $header, 'rows' => $rows));
+}
+
+/* Permission callbacks ***************************************************** */
+
+/**
+ * See if the user can view the bid history on a node.
+ *
+ * As not all nodes will even have bid history, this also checks to see if the
+ * node is in fact a product which is up for auction.
+ *
+ * @param $node
+ *   The node.
+ * @return
+ *   Whether the current user can see the node's bid history or not.
+ */
+function uc_auction_bid_history_perm($node) {
+  return isset($node->uc_auction) && user_access('view bids');
+}
+
+/**
+ * See if the user can view a particular user's auction activity.
+ *
+ * @param $see_user
+ *   The user whose activity will be seen.
+ * @return
+ *   Whether the current user can see the activity or not.
+ */
+function uc_auction_user_auctions_perm($see_user) {
+  global $user;
+  return $user->uid == $see_user->uid || user_access('administer users');
+}
+
+/* Non-hook helper functions ************************************************ */
+
+/**
+ * Check if the remainder of two divisors is zero.
+ *
+ * PHP's standard modulus operator converts the parameters to integers before
+ * operating - not convenient when dealing with currency. This function will
+ * check to see if the first parameter can be cleanly divided by the second
+ * regardless of number type.
+ *
+ * @param $big
+ *   The larger number to be divided.
+ * @param $small
+ *   The smaller number to divide the larger number by. If NULL is passed, the
+ *   function will use the uc_auction_bid_increment variable value.
+ * @return
+ *   Whether this division occurs with no remainder. TRUE if yes.
+ */
+function _uc_auction_mod_zero($big, $small = NULL) {
+  if ($small === NULL) {
+    $small = variable_get('uc_auction_bid_increment', .25);
+  }
+  $div = $big / $small;
+  return $div == intval($div);
+}
+
+/**
+ * Converts a string which should contain a currency value into a float.
+ *
+ * Remove the thousands character (in case it is a period), convert the current
+ * uc_currency_dec character to a period (decimal point), strip out characters
+ * which aren't digits, periods or negative signs, then floatval() it.
+ *
+ * @param $val
+ *   The currency value.
+ * @return
+ *   The currency value as a float.
+ */
+function _uc_auction_uncurrency($val) {
+  return floatval(preg_replace('/[^\d\.\-]/', '', str_replace(array(variable_get('uc_currency_thou', ','), variable_get('uc_currency_dec', '.')), array('', '.'), $val)));
+}
+
+/* Ubercart hooks *********************************************************** */
+
+/**
+ * Ubercart's API documentation can be found at:
+ * http://www.ubercart.org/docs/api/
+ */
+
+/**
+ * Implements hook_uc_message() (an Ubercart hook)().
+ */
+function uc_auction_uc_message() {
+  return array(
+    'uc_auction_notify_win_subj' => t('You won "[auction:product-name]" at [site:name]!'),
+    'uc_auction_notify_win_msg' => t("Congratulations!\n\nYou've won an auction at [site:name].\n\nProduct: [auction:product-name]\nWinning bid price: [auction:formatted-price]\n\nTo purchase the product you've won, please go to the product page at the address below and use the \"Add to cart\" button to add it to your shopping cart. Then check out as normal. The product page is:\n[auction:product-url]\n\nIf you don't see the \"Add to cart\" button, you may need to log in first:\n[auction:site-login-url]\n\nPlease ignore this message if you have already purchased this item.\n\nThanks for bidding at [site:name]!\n\n"),
+    'uc_auction_notify_outbid_subj' => t('You were outbid on "[auction:product-name]" at [site:name]'),
+    'uc_auction_notify_outbid_msg' => t("You've been outbid on a product up for auction at [site:name].\n\nProduct: [auction:product-name]\nCurrent high bid: [auction:formatted-price]\n(Note that higher bids may have been placed since this message was sent.)\n\nIf you're still interested in winning the auction for this product, head to the product page at the address below and place another bid:\n[auction:product-url]\n\nIf you cannot place a bid, you may need to log in first:\n[auction:site-login-url]\n\nThanks for bidding at [site:name]! Good luck!\n\n If you would prefer not to receive these notifications, log in to your user account at [site:name] and click the \"Edit\" tab. Then uncheck the \"Notify me by e-mail when I'm outbid on an auction\" check box.\n[auction:site-login-url]"),
+  );
+}
+
+/**
+ * Implements hook_order() (an Ubercart hook)().
+ */
+function uc_auction_uc_order($op, &$arg1, $arg2) {
+  if ($op === 'submit') {
+    $nids = array();
+    foreach ($arg1->products as $prod) {
+      $nids[] = $prod->nid;
+    }
+    // We'll lazily go ahead and dumb-update all of these. No harm if they're
+    // not actually auctioned products (and therefore not in the table).
+    // TODO Please convert this statement to the D7 database API syntax.
+    db_query('UPDATE {uc_auction} SET purchased = 1 WHERE nid IN (:nids)',array(':nids'=> $nids));
+  }
+}
+
+/**
+ * Implements hook_add_to_cart() (an Ubercart hook)().
+ */
+function uc_auction_uc_add_to_cart($nid, $qty, $data) {
+  if (variable_get('uc_auction_force_one', TRUE)) {
+    $node = node_load($nid);
+    if (isset($node->uc_auction)) {
+      if ($qty > 1) {
+        return array(
+          array(
+            'success' => FALSE,
+            'message' => t('You may not add more than one of an auctioned item to your cart.'),
+          ),
+        );
+      }
+      foreach (uc_cart_get_contents() as $cart_item) {
+        if ($cart_item->nid === $nid) {
+          return array(
+            array(
+              'success' => FALSE,
+              'message' => t('You may not add more than one of an auctioned item to your cart.'),
+            ),
+          );
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_uc_cart_item() (an Ubercart hook)().
+ */
+function uc_auction_uc_cart_item($op, $item) {
+  if ($op === 'load') {
+    $query = db_select('uc_auction','ua');
+    $query->leftjoin('uc_auction_bids','uab','ua.high_bid = uab.bid');
+    $query->fields('ua',array('high_bid'));
+    $query->fields('uab',array('amount'));
+    $query->condition('ua.nid',$item->nid,'=');
+    if ($info = $query->execute()->fetchAssoc()) {
+      $item->sell_price = $item->price;
+      if ($info['amount'] !== NULL) {
+        $item->price = floatval($info['amount']);
+        $item->display_price = $item->price;
+      }
+      $item->is_auc = TRUE;
+    }
+    else {
+      $item->is_auc = FALSE;
+    }
+  }
+}
+
+/* Token hooks ************************************************************** */
+
+/**
+ * Documentation for Token's API can be found at:
+ * http://api.freestylesystems.co.uk/api/file/contributions/token/token.module/6
+ */
+
+
+/**
+ * Implements hook_token_info().
+ */
+function uc_auction_token_info() {
+	// TODO: add token info for each token described in uc_auction_tokens().
+	
+	 $types['auction'] = array(
+	   'name' => t("Auction Tokens"),
+	   'description' => t("Tokens for Auction."),
+	 );
+
+	 // Auction specific tokens.
+	 $auction['winner-name'] = array(
+	   'name' => t("Winner name"),
+	   'description' => t("The winner name"),
+	 );
+
+	 return array(
+	   'types' => $types,
+	   'tokens' => array(
+	     'auction' => $auction,
+	   ),
+	 );
+}
+
+
+/**
+ * Implements hook_tokens().
+ */
+function uc_auction_tokens($type, $tokens, array $data = array(), array $options = array()) {
+	
+	$replacements = array();
+	
+	if ($type == "auction") {
+		
+		$object = $data['node'];
+		$winner = user_load($object->uc_auction['high_bid_uid']);
+
+		// define what should be replaced
+		$from = array("winner-name","winner-uid","product-url","product-name","site-login-url","formatted-price");
+		$to = array(
+					$winner->name,
+					$winner->uid,
+					url('node/' . $object->nid, array('absolute' => TRUE)),
+					$object->title,
+					url('user', array('absolute' => TRUE)),
+					uc_currency_format($object->uc_auction['high_bid_amt']),
+			);
+		
+		// iterate through the tokens and do replacements
+		foreach ($tokens as $name => $original) {
+			if ( in_array($name, $from) ) {
+				$replacements[$original] = str_replace($from, $to, $name);
+			}
+		}
+	}
+	
+	return $replacements;
+	
+}
+
+/* Views hooks ************************************************************** */
+
+/**
+ * Documentation for Views' API is pretty much impossible to find in a format
+ * legible to mere mortals.
+ */
+
+/**
+ * Implements hook_views_api().
+ *
+ * Thanks to pndur for some initial help wrapping my head around Views:
+ * http://drupal.org/node/316201
+ */
+function uc_auction_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'uc_auction') . '/views',
+  );
+}

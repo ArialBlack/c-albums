@@ -1,0 +1,55 @@
+<?php
+
+/**
+ * @file
+ * Just another module installation file.
+ *
+ * @ingroup uc_auction_now
+ */
+
+/**
+ * Implements hook_install().
+ */
+function uc_auction_now_install() {
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function uc_auction_now_uninstall() {
+  global $conf;
+  foreach (array_keys($conf) as $key) {
+    if (strpos($key, 'uc_auction_now') === 0) {
+      variable_del($key);
+    }
+  }
+}
+
+/**
+ * Implements hook_schema().
+ */
+function uc_auction_now_schema() {
+  return array(
+    'uc_auction_now' => array(
+      'description' => 'Identifies auctions which can be bought now.',
+      'fields' => array(
+        'nid' => array(
+          'description' => 'The {node}.nid of the product.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'bought_now' => array(
+          'description' => 'Was this product purchased using the Buy Now function?',
+          'type' => 'int',
+          'size' => 'tiny',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+      ),
+      'primary key' => array('nid'),
+    ),
+  );
+}
