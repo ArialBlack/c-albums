@@ -14,6 +14,10 @@
             
             //$('#magazine').turn({gradients: true, acceleration: true}); 
         });
+        
+        $('.field-name-field-coin').bind('touchstart', function(){
+            $(this).toggleClass('hover');
+        });
 
 
     });
