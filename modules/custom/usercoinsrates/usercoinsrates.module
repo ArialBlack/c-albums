@@ -32,7 +32,7 @@
     //dsm($result->fetchAll());
 
     $rows = array();
-    $header = array(  '1', '2',  '3');
+    $header = array(  'Estimation', 'User',  'Date');
 
     $already_submitted = false;
     $user_submitted_value = 0;
@@ -42,12 +42,17 @@
         $already_submitted = true;
         $user_submitted_value = $value['estimation'];
       } else {
+        $user_fromrecord = user_load($value['uid']);
+        $username = $user_fromrecord->name;
+
         $rows[] = array(
           $value['estimation'],
+          l($username, '/user/' . $value['uid'], array('attributes' => array('class' => array('username')))),
           $value['created'],
-          $value['uid'],
         );
       }
+
+
     }
 
     if (count($rows) > 0) {
@@ -121,13 +126,6 @@
 
     }
 
-    /*$form['submit_button_2'] = array
-    (
-      '#type' => 'submit',
-      '#value' => 'show message',
-      '#submit' => array('submit_button_2_submit'),
-    );*/
-
     return $form;
   }
 
@@ -143,8 +141,8 @@
         'estimation' => $form_state['values']['estimation'],
         'created' => date('Y-m-d H:m:s'),
       ))
-      ->condition('r.coin_id', $form_state['values']['nid'])
-      ->condition('r.uid', $current_user)
+      ->condition('coin_id', $form_state['values']['nid'])
+      ->condition('uid', $current_user)
       ->execute();
   }
 
