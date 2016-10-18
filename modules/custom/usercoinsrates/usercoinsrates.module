@@ -1,84 +1,132 @@
-
 <?php
-
-function usercoinsrates_menu() {
-  // First example (attaching contextual links to a node):
-  //
-  // Many modules add tabs to nodes underneath the node/<nid> path. If the path
-  // you are adding corresponds to a commonly performed action on the node, you
-  // can choose to expose it as a contextual link. Since the Node module
-  // already has code to display all contextual links underneath the node/<nid>
-  // path (such as "Edit" and "Delete") when a node is being rendered outside
-  // of its own page (for example, when a teaser of the node is being displayed
-  // on the front page of the site), you only need to inform Drupal's menu
-  // system that your path is a contextual link also, and it will automatically
-  // appear with the others. In the example below, we add a contextual link
-  // named "Example action" to the list.
-  $items['node/%node/estimate'] = array(
-    'title' => 'Estimate!',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('usercoinsrates_node_action_form', 1),
-    'access callback' => array('usercoinsrates_access_callback', 1),
-    //'access arguments' => array(1),
-    // To be displayed as a contextual link, a menu item should be defined as
-    // one of the node's local tasks.
-    'type' => MENU_LOCAL_TASK,
-    // To make the local task display as a contextual link, specify the
-    // optional 'context' argument. The most common method is to set both
-    // MENU_CONTEXT_PAGE and MENU_CONTEXT_INLINE (shown below), which causes
-    // the link to display as both a tab on the node page and as an entry in
-    // the contextual links dropdown. This is recommended for most cases
-    // because not all users who have permission to visit the "Example action"
-    // page will necessarily have access to contextual links, and they still
-    // need a way to get to the page via the user interface.
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    // If we give the item a large weight, we can make it display as the last
-    // tab on the page, as well as the last item inside the contextual links
-    // dropdown.
-    'weight' => 80,
-  );
-
-  return $items;
-}
-
-  function usercoinsrates_access_callback($node) {
-    return $node->type == 'coin' && user_access('access content');
+  function usercoinsrates_menu() {
+    $items['node/%node/estimate'] = array(
+      'title' => 'Estimate!',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('usercoinsrates_node_action_form', 1),
+      'access callback' => array('usercoinsrates_access_callback', 1),
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      'weight' => 80,
+    );
+    return $items;
   }
 
+  function usercoinsrates_access_callback($node) {
+    return $node->type == 'coin' && user_is_logged_in();
+  }
+
+  function usercoinsrates_check_if_user_already_rate() {
+
+  }
 
   function usercoinsrates_node_action_form($form, &$form_state, $node) {
+    global $user;
+    $current_user = $user->uid;
+
+    $query = db_select('usercoinsrates', 'r');
+    $query->fields('r', array('record_id','coin_id', 'estimation', 'created', 'uid'));
+    $query->condition('r.coin_id', $node->nid);
+    $result = $query->execute();
+
+    //dsm($result->fetchAll());
+
+    $rows = array();
+    $header = array(  '1', '2',  '3');
+
+    $already_submitted = false;
+    $user_submitted_value = 0;
+
+    while ($value = $result->fetchAssoc()) {
+      if ($value['uid'] == $current_user) {
+        $already_submitted = true;
+        $user_submitted_value = $value['estimation'];
+      } else {
+        $rows[] = array(
+          $value['estimation'],
+          $value['created'],
+          $value['uid'],
+        );
+      }
+    }
+
+    if (count($rows) > 0) {
+      $table = theme('table', array('header' => $header, 'rows' => $rows));
+    } else {
+      $table = '';
+    }
+
     $form['text'] = array(
       '#markup' => t('This is the page that would allow you to perform an example action on node @nid.', array('@nid' => $node->nid)),
       '#prefix' => '<p>',
       '#suffix' => '</p>',
     );
+
+    $form['table'] = array(
+      '#markup' => $table,
+    );
+
     $form['nid'] = array(
       '#type' => 'value',
       '#value' => $node->nid,
     );
 
-    $form['estimation'] = array(
-      '#title' => 'value',
-      '#description' => 'Estimation of coin',
-      '#type' => 'textfield',
-     // '#default_value' => isset($handbonuses->debetcredit) ? $handbonuses->debetcredit : '0.0000',
-      '#required' => true,
-      '#size' => 10,
-    );
+    if ($already_submitted) {
+      $form['estimation'] = array(
+        '#title' => 'value',
+        '#description' => 'Your previous Estimation of coin',
+        '#type' => 'textfield',
+        '#default_value' => $user_submitted_value,
+        '#required' => true,
+        '#size' => 10,
+      );
 
-    $form['submit_button_1'] = array
+      $form['submit_button_1'] = array
+      (
+        '#type' => 'submit',
+        '#value' => 'Change estimation',
+        '#submit' => array('submit_button_updaterecord'), // update field
+      );
+
+      $form['submit_button_2'] = array
+      (
+        '#type' => 'submit',
+        '#value' => 'Delete estimation',
+        '#submit' => array('submit_button_deleterecord'), // delete field
+      );
+
+    } else {
+      $form['estimation'] = array(
+        '#title' => 'value',
+        '#description' => 'Estimation of coin',
+        '#type' => 'textfield',
+        // '#default_value' => isset($handbonuses->debetcredit) ? $handbonuses->debetcredit : '0.0000',
+        '#required' => true,
+        '#size' => 10,
+      );
+
+      $form['submit_button_1'] = array
+      (
+        '#type' => 'submit',
+        '#value' => 'Estimate',
+        '#submit' => array('submit_button_addrecord'), // add record
+      );
+
+      $form['submit_button_2'] = array
+      (
+        '#type' => 'hidden',
+        '#value' => 'hidden',
+        '#submit' => array('submit_button_addrecord'), // hidden
+      );
+
+    }
+
+    /*$form['submit_button_2'] = array
     (
       '#type' => 'submit',
-      '#value' => t('Do something'),
-      '#submit' => array('submit_button_1_submit'),
-    );
-
-    $form['submit_button_2'] = array
-    (
-      '#type' => 'submit',
-      '#value' => t('Do something else'),
+      '#value' => 'show message',
       '#submit' => array('submit_button_2_submit'),
-    );
+    );*/
 
     return $form;
   }
@@ -86,9 +134,31 @@ function usercoinsrates_menu() {
   /**
    * Submit handler for contextual_links_example_node_action_form().
    */
-  function submit_button_1_submit($form, &$form_state) {
-    //drupal_set_message(t('The example action was performed on node @nid.', array('@nid' => $form_state['values']['nid'])));
+  function submit_button_updaterecord ($form, &$form_state) {
+    global $user;
+    $current_user = $user->uid;
 
+    db_update('usercoinsrates')
+      ->fields(array(
+        'estimation' => $form_state['values']['estimation'],
+        'created' => date('Y-m-d H:m:s'),
+      ))
+      ->condition('r.coin_id', $form_state['values']['nid'])
+      ->condition('r.uid', $current_user)
+      ->execute();
+  }
+
+  function submit_button_deleterecord ($form, &$form_state) {
+    global $user;
+    $current_user = $user->uid;
+
+    db_delete('usercoinsrates')
+      ->condition('coin_id', $form_state['values']['nid'])
+      ->condition('uid', $current_user)
+      ->execute();
+  }
+
+  function submit_button_addrecord($form, &$form_state) {
     global $user;
     $current_user = $user->uid;
 
@@ -101,10 +171,6 @@ function usercoinsrates_menu() {
       ))
       ->execute();
   }
-
-function submit_button_2_submit($form, &$form_state) {
-  drupal_set_message(t('The example action was performed on node @nid.', array('@nid' => $form_state['values']['nid'])));
-}
 
 
   /*
