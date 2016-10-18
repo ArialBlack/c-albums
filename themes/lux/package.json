@@ -1,0 +1,31 @@
+{
+  "name": "Coins",
+  "version": "1.0.0",
+  "authors": [
+    "Andrey Turik <andreyturik@gmail.com>"
+  ],
+  "description": "Coins",
+  "dependencies": {
+    "express": "strongloop/express"
+  },
+  "devDependencies": {
+    "autoprefixer": "*",
+    "grunt": "^0.4.5",
+    "grunt-bake": "^1.6.3",
+    "grunt-cli": "*",
+    "grunt-contrib-clean": "^0.6.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-less": "^1.4.0",
+    "grunt-contrib-sass": "^1.0.0",
+    "grunt-contrib-watch": "^0.6.1",
+    "grunt-ftp-push": "^0.4.4",
+    "grunt-postcss": "^0.7.1",
+    "grunt-svgmin": "^3.1.0",
+    "grunt-svgstore": "^0.5.0",
+    "jit-grunt": "^0.9.1"
+  },
+  "scripts": {
+    "grunt": "grunt",
+    "jenkins": "grunt jenkins"
+  }
+}

@@ -1,0 +1,28 @@
+name = Lux
+description = Drupal Materialize
+core = 7.x
+
+scripts[] = js/materialize.min.js
+scripts[] = js/lux.settings.js
+
+stylesheets[all][] = css/style.css
+
+regions[navigation] = Navigation
+regions[header] = Header
+regions[highlighted] = Highlighted
+regions[help] = Help
+regions[content] = Content
+regions[sidebar_first] = Left sidebar
+regions[sidebar_second] = Right sidebar
+regions[footer] = Footer
+
+features[] = logo
+features[] = name
+features[] = slogan
+features[] = node_user_picture
+features[] = comment_user_picture
+features[] = comment_user_verification
+features[] = favicon
+features[] = main_menu
+
+dependencies[] = jquery_update

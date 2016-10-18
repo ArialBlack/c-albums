@@ -1,0 +1,205 @@
+/* Typography */
+h1, h3, h5 {
+  font-weight: 300;
+}
+h2, h4, h6, p {
+  font-weight: 400;
+}
+
+/* Nav elements overrides */
+#logo img {
+  vertical-align: middle;
+}
+#name-and-slogan {
+  display: inline-block;
+  margin: 0 7%;
+}
+.nav-section {
+  display: inline;
+}
+.clearfix.right {
+  clear: right;
+}
+/* Components */
+.btn {
+  margin: 0 10px 0 0;
+}
+form select {
+  display: none;
+}
+.select-dropdown.dropdown-content li>a, .select-dropdown.dropdown-content li>span {
+  font-size: 12px;
+}
+/* Prefix/Suffix CSS overrides */
+form input {
+  width: auto !important;
+}
+.field-prefix + input[type="text"],
+.field-suffix + input[type="text"] {
+  text-align: center;
+}
+
+/* Textarea Grippie overrides */
+textarea {
+  margin-bottom: 0 !important;
+}
+textarea:focus + .grippie {
+  margin-top: 1px;
+}
+
+/* File field CSS overrides*/
+.file-field input[type="file"] {
+  width: 91px !important;
+}
+.file-field button.btn {
+  position: static;
+  float: none;
+  margin: 0 0 0 10px;
+}
+.file-path button[value="Remove"] {
+  width: 0px !important;
+}
+.file-size ~ .validate {
+  display: none;
+}
+/*Fieldset overrides*/
+.collapsible-body {
+  padding: 10px 20px;
+}
+/* Band-aids for growing pains, will be removed as project matures */
+.wrapper {
+  max-width: 1024px;
+  margin: 0 auto;
+}
+#page-wrapper {
+  overflow-x: hidden;
+}
+#page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+table th, table td {
+  padding: 15px 20px;
+}
+
+.ajax-progress {
+  margin-left: 10px;
+  vertical-align: middle;
+}
+.ajax-progress .throbber {
+  background-image: url(../images/loading.gif);
+  background-size: 32px;
+  width: 32px;
+  height: 32px;
+}
+.page-admin-people-permissions input[type="checkbox"]:not(:checked), 
+.page-admin-people-permissions input[type="checkbox"]:checked {
+  position: relative;
+  left: 0;
+}
+/* Node Edit Tabs Overrides */
+.tabs.primary,
+.tabs.secondary {
+  margin: 0;
+  padding: 0 !important;
+  border: none !important;
+}
+.tabs.primary a,
+.tabs.secondary a {
+  padding: 0 !important;
+  background: none !important;
+  color: #009688 !important;
+  border: 0 !important;
+  border-bottom: 2px solid #e0f2f1 !important;
+}
+.tabs.primary .tab,
+.tabs.secondary .tab {
+  width: 10% !important;
+}
+.tabs .indicator {
+  background: #80cbc4 !important;
+}
+.form-textarea-wrapper {
+  border: 1px solid #bdbdbd;
+}
+/* Accordion - Features Override */
+fieldset.features-export-component.collapsible {
+  background: #fff !important;
+}
+#features-filter fieldset {
+  padding: 0 10px !important;
+}
+.container-inline div.collapsible-header {
+  display: block;
+}
+/* Pager */
+.pager-wrap {
+  max-width: 725px;
+  margin: 0 auto;
+}
+.prev.first {
+  margin-right: 30px;
+}
+.clearafter:after {
+  content: '';
+  display: block;
+  clear: both;
+}
+a.feed-icon {
+  display: none;
+}
+/* Status Messages */
+.alert {
+  color: #fff;
+}
+.alert a {
+  color: #bbdefb;
+}
+/*Admin specific overrides*/
+div.admin .left {
+  margin-left: 0;
+}
+.admin-panel.card {
+  margin: 30px 0;
+  padding: 15px 120px 45px 15px;
+  background-size: 75px;
+  background-position: 96% 15px;
+  background-repeat: no-repeat;
+}
+.admin-panel.card.people {
+  background-image: url('../images/config/people.png');
+}
+.admin-panel.card.content {
+  background-image: url('../images/config/content.png');
+}
+.admin-panel.card.media {
+  background-image: url('../images/config/media.png');
+}
+.admin-panel.card.search {
+  background-image: url('../images/config/search.png');
+}
+.admin-panel.card.system {
+  background-image: url('../images/config/system.png');
+}
+.admin-panel.card.user-interface {
+  background-image: url('../images/config/user-interface.png');
+}
+.admin-panel.card.development {
+  background-image: url('../images/config/development.png');
+}
+.admin-panel.card.services {
+  background-image: url('../images/config/services.png');
+}
+.admin-panel.card.regional {
+  background-image: url('../images/config/regional.png');
+}
+.admin-panel.card.administration {
+  background-image: url('../images/config/administration.png');
+}
+.admin-panel.card .title, div.admin-panel .description {
+  font-weight: 300;
+}
+.admin-panel dt a {
+  font-weight: 400;
+} 

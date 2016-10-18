@@ -1,0 +1,75 @@
+<?php
+
+function usercoinsrates_schema() {
+  $schema['usercoinsrates'] = array(
+    'fields' => array(
+     
+	  'record_id' => array(
+        'description' => 'Record ID',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+   
+   	  'coin_id' => array(
+        'description' => 'Coin node ID',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+   
+      'uid' => array(
+        'description' => 'The {users}.uid that rate coin',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+
+      'estimation' => array(
+        'description' => 'Amount of money',
+        'type' => 'numeric',
+        'size' => 'normal',
+        'not null' => false,
+        'default' => 0,
+        'precision' => 10,
+        'scale' => 4
+      ),
+
+      'created' => array(
+        'description' => 'The datetime when the record was created.',
+        'type' => 'varchar',
+        'mysql_type' => 'datetime',
+        'not null' => TRUE,
+     ),
+   
+    ),
+    'primary key' => array('record_id'),
+  );
+ 
+  return $schema;
+}
+
+function usercoinsrates_enable() {
+  //Check if table exists, if not install the schema.
+  if(db_table_exists('usercoinsrates') == FALSE) {
+    drupal_install_schema('usercoinsrates');
+  }
+}
+
+ function usercoinsrates_uninstall() {
+  if(db_table_exists('usercoinsrates') == TRUE) {
+    cache_clear_all('usercoinsrates', 'cache', TRUE);
+  	//	  drupal_uninstall_schema('proposeitem');
+    menu_rebuild();
+  }
+}
+
+
+/*function proposeitem_update_7100() {
+  $table_name = 'proposeitem_money';
+  $schema = drupal_get_schema_unprocessed('proposeitem', $table_name);
+  db_create_table($table_name, $schema);
+
+  return $table_name . ' table created.';
+}*/
+

@@ -225,3 +225,4 @@ themes/bootstrap/
 node_modules/
 .ftpauth
 *.css
+.sass-cache/
