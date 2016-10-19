@@ -2,3 +2,7 @@
 @import 'base';
 
 @import 'coins.scss';
+
+.node-type-album {
+  @import 'albums.scss';
+}

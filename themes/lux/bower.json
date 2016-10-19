@@ -1,0 +1,21 @@
+{
+  "name": "Coins",
+  "description": "Coins",
+  "main": "",
+  "authors": [
+    "ArialBlack <andreyturik@gmail.com>"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/ArialBlack/c-albums",
+  "moduleType": [],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "Ionicons": "ionicons#~2.0.1"
+  }
+}

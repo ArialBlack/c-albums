@@ -12,8 +12,12 @@ function coins_entity_view($entity, $type, $view_mode, $langcode) {
 
 function coins_block_info() {
   $blocks = array();
-  $blocks['Coins'] = array(
-    'info' => t('Coins'),
+  $blocks['UserActions'] = array(
+    'info' => t('User Actions'),
+  );
+
+  $blocks['UserCollection'] = array(
+    'info' => t('User Collection'),
   );
 
   return $blocks;
@@ -26,18 +30,31 @@ function coins_block_view($delta = '') {
   $block = array();
 
   switch ($delta) {
-    case 'Coins':
+    case 'UserActions':
       $block['subject'] = '';
-      $block['content'] = _ca_block();
+      $block['content'] = _ua_block();
+      break;
+
+    case 'UserCollection':
+      $block['subject'] = '';
+      $block['content'] = _uc_block();
       break;
   }
 
   return $block;
 }
 
-function _ca_block() {
-            $output = 'hi';
+function _ua_block() {
+  $output = '<nav></nav><ul><li>' . l(t('Add coin'), '/node/add/coin', array('attributes' => array('class' => array('')))) . '</li>';
+  $output = $output . '<li>' . l(t('Create album'), '/node/add/album', array('attributes' => array('class' => array('')))) . '</li></ul></nav>';
+  return $output;
+}
 
- 
+function _uc_block() {
+  global $user;
+  $username = $user->name;
+
+  $output = '<nav></nav><ul><li>' . l(t('My albums'), '/user/' . $username  . '/albums', array('attributes' => array('class' => array('')))) . '</nav>';
+  //$output = $output . '<li>' . l(t('Create album'), '/node/add/album', array('attributes' => array('class' => array('')))) . '</li></ul></nav>';
   return $output;
 }
