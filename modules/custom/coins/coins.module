@@ -5,8 +5,10 @@
 */
 
 function coins_entity_view($entity, $type, $view_mode, $langcode) {
-    if ($view_mode == 'teaser' && $entity->type == 'coin') {
+    if ($view_mode == 'teaser' && $entity->type == 'coin' && isset($entity->content['field_coin'])) {
+      if(count($entity->content['field_coin']) > 1 ) {
         $entity->content['field_coin']['#items'] = array_slice($entity->content['field_coin']['#items'], 0, 2);
+      }
     }
 }
 
@@ -60,6 +62,53 @@ function _uc_block() {
 }
 
 function coins_form_alter(&$form, &$form_state, $form_id) {
+  $STARTED_USER_COINS_LIMIT = 3;
+  $STARTED_USER_ALBUMS_LIMIT = 2;
+
+  global $user;
+  $current_user = $user->uid;
+
+  if ($form['#id'] == 'coin-node-form' && $form['nid']['#value'] == NULL) {
+    dsm($form);  // pretty print array using Krumo to messages
+    $query = db_select('node', 'n');
+    $query->condition('n.type', 'coin');
+    $query->condition('n.uid', $current_user);
+    $query->addExpression('COUNT(*)');
+    $coins_count = $query->execute()->fetchField();
+
+    $query = db_select('coins', 'c');
+    $query->condition('c.uid', $current_user);
+    $query->addExpression('SUM(c.coins)');
+    $coins_bonuslimit = $query->execute()->fetchField();
+
+    drupal_set_message('coins count: ' . $coins_count, 'warning');
+
+    if ($coins_count >= $STARTED_USER_COINS_LIMIT + $coins_bonuslimit) {
+      drupal_set_message(t('Out of coins limit'), 'warning');
+      drupal_goto('/node');
+    }
+  }
+
+  if ($form['#id'] == 'album-node-form' && $form['nid']['#value'] == NULL) {
+    $query = db_select('node', 'n');
+    $query->condition('n.type', 'album');
+    $query->condition('n.uid', $current_user);
+    $query->addExpression('COUNT(*)');
+    $albums_count = $query->execute()->fetchField();
+
+    $query = db_select('coins', 'c');
+    $query->condition('c.uid', $current_user);
+    $query->addExpression('SUM(c.albums)');
+    $albums_bonuslimit = $query->execute()->fetchField();
+
+    drupal_set_message('albums count: ' . $albums_count, 'warning');
+
+    if ($albums_count >= $STARTED_USER_COINS_LIMIT + $albums_bonuslimit) {
+      drupal_set_message(t('Out of albums limit'), 'warning');
+      drupal_goto('/node');
+    }
+  }
+
   if ($form['#id'] == 'views-exposed-form-mycoinslist-entityreference-view-widget-1') {
 
     $quartiers[] = array('ALL' => t('- Any -'));
