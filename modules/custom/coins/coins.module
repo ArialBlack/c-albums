@@ -58,3 +58,33 @@ function _uc_block() {
   //$output = $output . '<li>' . l(t('Create album'), '/node/add/album', array('attributes' => array('class' => array('')))) . '</li></ul></nav>';
   return $output;
 }
+
+function coins_form_alter(&$form, &$form_state, $form_id) {
+  if ($form['#id'] == 'views-exposed-form-mycoinslist-entityreference-view-widget-1') {
+
+    $quartiers[] = array('ALL' => t('- Any -'));
+    unset ($form['my_almum_title']);
+
+    global $user;
+    $current_user = $user->uid;
+
+    $result = db_select('node', 'n')
+      ->fields('n', array('title'))
+      ->condition('n.type', 'album')
+      ->condition('n.status', '1')
+      ->condition('n.uid', $current_user)
+      ->execute();
+
+    $dropdown_array = array('' => t('- Any -'));
+
+    foreach ($result as $node) {
+      $dropdown_array[$node->title] = $node->title;
+    }
+
+    $form['my_almum_title'] = array(
+      '#type' => 'select',
+      '#default_value' => '1',
+      '#options' => $dropdown_array,
+    );
+  }
+}

@@ -8,9 +8,27 @@
           });
 
       $('ul.tabs').tabs();
+      $('select').material_select();
 
 
-    console.log('1');
+      $(document).on('CToolsAttachBehaviors', function () {
+          $('select').material_select();
+      });
+
+      $( document ).ajaxComplete(function() {
+          $('select').material_select();
+
+      });
+
+      /*$(window).on('selectDropdownInputChanged', function() {
+          $val = $('.view-mycoinslist #user-album-select ul li.active span').text();
+          console.log($val);
+          if( $val === '- Any -') {
+            $val = '';
+          }
+          $('.view-mycoinslist .view-filters .form-item-title input').val($val);
+      });*/
+
 
   }); // end of document ready
 })(jQuery); // end of jQuery name space

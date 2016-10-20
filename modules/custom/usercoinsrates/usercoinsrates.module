@@ -1,13 +1,17 @@
 <?php
 
   function usercoinsrates_menu() {
+  //global $node;
+    //dsm('2');
+
     $items['node/%node/estimations'] = array(
-      'title' => 'Estimate this coin',
+      'title' => 'Estimate',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('usercoinsrates_node_action_form', 1),
-      'access callback' => array('usercoinsrates_access_callback', 1),
+      'access callback' => array('usercoinsrates_access_callback'),
+      'access arguments' => array(1),
       'type' => MENU_LOCAL_TASK,
-      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
       'weight' => 82,
     );
 
@@ -15,7 +19,9 @@
   }
 
   function usercoinsrates_access_callback($node) {
-    return $node->type == 'coin';
+    if ($node->type == 'coin') {
+      return TRUE;
+    }
   }
 
 
