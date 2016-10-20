@@ -1,0 +1,72 @@
+<?php
+
+function coins_schema() {
+  $schema['coins'] = array(
+    'fields' => array(
+
+      'record_id' => array(
+        'description' => 'Record ID',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+
+      'uid' => array(
+        'description' => 'The {users}.uid',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+
+      'coins' => array(
+        'description' => 'Amount of money',
+        'type' => 'int',
+        'size' => 'small',
+        'default' => 0,
+      ),
+
+      'albums' => array(
+        'description' => 'Amount of money',
+        'type' => 'int',
+        'size' => 'small',
+        'default' => 0,
+      ),
+
+      'created' => array(
+        'description' => 'The datetime when the record was created.',
+        'type' => 'varchar',
+        'mysql_type' => 'datetime',
+        'not null' => TRUE,
+      ),
+
+    ),
+    'primary key' => array('record_id'),
+  );
+
+  return $schema;
+}
+
+function coins_enable() {
+  //Check if table exists, if not install the schema.
+  if(db_table_exists('coins') == FALSE) {
+    drupal_install_schema('coins');
+  }
+}
+
+function coins_uninstall() {
+  if(db_table_exists('coins') == TRUE) {
+    cache_clear_all('coins', 'cache', TRUE);
+    //	  drupal_uninstall_schema('proposeitem');
+    menu_rebuild();
+  }
+}
+
+
+/*function proposeitem_update_7100() {
+  $table_name = 'proposeitem_money';
+  $schema = drupal_get_schema_unprocessed('proposeitem', $table_name);
+  db_create_table($table_name, $schema);
+
+  return $table_name . ' table created.';
+}*/
+

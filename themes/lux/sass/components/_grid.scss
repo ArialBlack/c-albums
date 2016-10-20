@@ -145,3 +145,14 @@
     }
   }
 }
+
+header,
+main,
+footer,
+#overlay {
+  padding-left: 300px;
+
+  @media only screen and (max-width: 992px) {
+    padding-left: 0;
+  }
+}

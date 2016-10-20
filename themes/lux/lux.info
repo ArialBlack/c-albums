@@ -2,8 +2,12 @@ name = Lux
 description = Drupal Materialize
 core = 7.x
 
-scripts[] = js/materialize.min.js
+scripts[] = js/materialize.js
 scripts[] = js/lux.settings.js
+
+scripts[] = js/vendors/bootstrap/alert.js
+
+scripts[] = js/init.js
 
 stylesheets[all][] = css/style.css
 

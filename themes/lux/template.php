@@ -56,11 +56,6 @@ function lux_theme(&$existing, $type, $theme, $path) {
   // Custom theme hooks:
   // Do not define the `path` or `template`.
   $hook_theme = array(
-    'usercoinsrates_node_action_form' => array(
-      'render element' => 'form',
-      'template' => 'usercoinsrates',
-      'path' => drupal_get_path('theme', 'lux') . '/templates/forms',
-    ),
 
     // 'bootstrap_links' => array(
     //   'variables' => array(

@@ -202,4 +202,9 @@ div.admin .left {
 }
 .admin-panel dt a {
   font-weight: 400;
-} 
+}
+
+tr.even,
+tr.odd {
+  background: none;
+}
