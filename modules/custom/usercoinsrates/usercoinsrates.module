@@ -1,9 +1,6 @@
 <?php
 
   function usercoinsrates_menu() {
-  //global $node;
-    //dsm('2');
-
     $items['node/%node/estimations'] = array(
       'title' => 'Estimate',
       'page callback' => 'drupal_get_form',
@@ -23,7 +20,6 @@
       return TRUE;
     }
   }
-
 
   function usercoinsrates_theme() {
     return array(

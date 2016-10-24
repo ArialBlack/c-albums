@@ -1,0 +1,16 @@
+name = Auction Buy Now
+description = Allows customers to purchase auctioned items immediately.
+dependencies[] = uc_auction
+core = 7.x
+package = "Ubercart - extra"
+files[] = uc_auction_now.install
+files[] = uc_auction_now.module
+files[] = views/uc_auction_now.views.inc
+files[] = views/uc_auction_now_handler_filter_is_now.inc
+
+; Information added by drupal.org packaging script on 2013-10-19
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "uc_auction"
+datestamp = "1382148818"
+

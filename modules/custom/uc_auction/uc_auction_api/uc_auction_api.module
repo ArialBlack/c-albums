@@ -1,0 +1,190 @@
+<?php
+
+/**
+ * @defgroup uc_auction_api Ubercart Auction API: Tests and examples for
+ * Ubercart Auction's API.
+
+ /**
+ * @file
+ * A sample module for testing and documenting Ubercart Auction's API.
+ *
+ * The .info file for this module has a ".info.example" extension to stop users
+ * from unwittingly enabling this module. It won't do any harm, but it'll cause
+ * some unusual behavior. If you want to really use this module for testing and
+ * such, remove the ".example" from the end of the info file's filename.
+ */
+
+/**
+ * Implements hook_auc_expired().
+ *
+ * This hook is called when cron is run and newly-ended auctions are found. Note
+ * that that means that this hook is *not* called the moment an auction ends
+ * (unless by mere chance), and if the site operator does not have cron runs
+ * configured, it may not be called at all!
+ *
+ * @param $nid
+ *   The {node}.nid of the auctioned node which has expired. Note that this is
+ *   the nid, not a node object; we don't load and pass a node object because
+ *   that may cause an unnecessary node_load() if no hook_auc_expired()s are
+ *   implemented and winner notification emails are not enabled.
+ * @return
+ *   Returned values are ignored.
+ */
+function uc_auction_api_auc_expired($nid) {
+  watchdog('uc_auction', 'hook_auc_expired() was called for node @nid.', array('@nid' => $nid));
+}
+
+/**
+ * Implements hook_bid_alter().
+ *
+ * This hook is called after a user bid has been validated and is about ready
+ * to be saved to the system. You can use this hook to alter details about the
+ * bid before it is saved, or even stop it from being saved at all. This hook
+ * should *not* be used to validate bids; use hook_form_alter() to add your own
+ * validation function to the "bid_table_form" form instead. If any
+ * Implements hook_bid_alter() returns FALSE, uc_auction will not save().
+ * the bid details to the database as it normally does, nor will it send an
+ * outbid notification to the previous bidder if so configured. You can take
+ * advantage of this if you're saving stuff to the database your own special
+ * way, but please try to avoid doing it this way if you can.
+ *
+ * @param &$node
+ *   The node object up for auction. Note that $node->sell_price contains the
+ *   previous bid value at this point, *not* the new high bid which is just now
+ *   being accepted. For that value, check (or set) $bid_record['amount'].
+ * @param &$bid_record
+ *   An array of values about to be inserted into {uc_auction_bids}. The keys
+ *   are 'nid', 'uid', 'time', and 'amount', all of which should be self-
+ *   explanatory.
+ * @param &$auc_record
+ *   An array of values which this node's record in {uc_auction} will be updated
+ *   with. The keys are 'nid', 'high_bidder', and 'bid_count'. 'high_bidder' is
+ *   the uid of the user.
+ * @return
+ *   FALSE if uc_auction should not save the bid data and send a notification as
+ *   normal. All other return values are ignored.
+ */
+function uc_auction_api_bid_alter(&$node, &$bid_record) {
+  drupal_set_message(t('hook_bid_alter() was called on a node with an nid of @nid. It&rsquo;s having a bid of value @amount placed on it by user @uid.', array('@nid' => $node->nid, '@amount' => uc_currency_format($bid_record['amount']), '@uid' => $bid_record['uid'])));
+}
+
+/**
+ * Implements hook_delete_bids().
+ *
+ * This hook is called when one or more bid(s) are about to be deleted.
+ * Implementations can tweak the node or the list of bids to be deleted before
+ * the deletion happens, or stop the deletion altogether by returning FALSE.
+ *
+ * @param &$bids
+ *   An array of {uc_auction_bids}.bid values of the bids about to be deleted.
+ *   When altering this array, care should be taken not to add any bids which
+ *   do not belong to the $node or don't exist otherwise, lest you throw off
+ *   uc_auction's math.
+ * @param &$node
+ *   The node whose bids are about to be deleted.
+ * @return
+ *   FALSE if the module should not delete the bids and reset the node's price
+ *   to the latest still-existing bid, or the start price if no bids are left.
+ *   All other return values are ignored. Note that even if you return FALSE,
+ *   uc_auction will try to drupal_goto() back to the bid list. You should use
+ *   drupal_set_message() to set a message explaining why bids weren't deleted,
+ *   or use your own drupal_goto(), to avoid confusing the user.
+ */
+function uc_auction_api_delete_bids(&$node, &$to_delete) {
+  // If this were "for real," we'd use format_plural() below.
+  drupal_set_message(t('hook_delete_bids() was called. @ct bids are about to be deleted from node @nid.', array('@ct' => count($to_delete), '@nid' => $node->nid)));
+}
+
+/**
+ * Implements hook_auc_create().
+ *
+ * This hook is called when a product is becoming an auctioned product. This may
+ * happen when a previously-existing product is converted into an auctioned
+ * product, or when a product becomes an auctioned product the moment it is
+ * created (it is not a non-auction product prior to that). The $new parameter
+ * will be FALSE or TRUE for each event respectively.
+ *
+ * @param &$node
+ *   The product node which is becoming an auctioned product.
+ * @param &$record
+ *   An array of the auction data which will be stored in {uc_auction} for this
+ *   node.
+ * @param $new
+ *   Differentiates between new products which are becoming auctioned products
+ *   as they are created for the first time (TRUE) and previously-existing
+ *   products which are just now becoming auctioned products (FALSE).
+ * @return
+ *   The return value is ignored.
+ */
+function uc_auction_api_auc_create(&$node, &$record, $new) {
+  if ($new) {
+    drupal_set_message(t('A new auctioned product is being created.'));
+  }
+  else {
+    drupal_set_message(t('The product %pname is becoming an auctioned product.', array('%pname' => $node->title)));
+  }
+}
+
+/**
+ * Implements hook_auc_update().
+ *
+ * This hook is called when a node which is an auctioned product is updated.
+ *
+ * @param &$node
+ *   The auctioned product node.
+ * @param &$record
+ *   The {uc_auction} record data which will be saved for this node.
+ * @return
+ *   The return value is ignored.
+ */
+function uc_auction_api_auc_update(&$node, &$record) {
+  drupal_set_message(t('The auctioned product %pname is being updated.', array('%pname' => $node->title)));
+}
+
+/**
+ * Implements hook_auc_remove().
+ *
+ * This hook is called when an auctioned product is to no longer be an auctioned
+ * product anymore. This may happen because it is being converted back to a
+ * regular, non-auctioned product (its auction data is being removed), or
+ * because its node is being deleted. The $deletion parameter will be FALSE or
+ * TRUE in either event respectively.
+ *
+ * @param $node
+ *   The node which will no longer be an auctioned product.
+ * @param $deletion
+ *   Whether the node is being deleted (TRUE) or merely will no longer be an
+ *   auctioned product anymore (FALSE).
+ * @return
+ *   Return values are ignored.
+ */
+function uc_auction_api_auc_remove($node, $deletion) {
+  if ($deletion) {
+    drupal_set_message(t('The auctioned product %pname is being deleted.', array('%pname' => $node->title)));
+  }
+  else {
+    drupal_set_message(t('%pname will no longer be an auctioned product.', array('%pname' => $node->title)));
+  }
+}
+
+/**
+ * Implements hook_auc_message().
+ *
+ * UC Auction may show a status messages using Drupal's standard
+ * drupal_set_message() depending on the user and what auction they are looking
+ * at. For example, if a user is a high bidder on an auction, they will see a
+ * message telling themso when they visit the auctioned item's product page.
+ * However, other modules may want to show their own messages on these pages
+ * which will be more relevant to what they are doing. With this hook, they can
+ * show their own messages while stifling ones UC Auction shows by default.
+ *
+ * @param $node
+ *   The node that the user is viewing. This will always be a full-page view,
+ *   not a teaser or anything else.
+ * @return
+ *   If FALSE is returned, the message that Ubercart Auction would normally
+ *   display will not be shown.
+ */
+function uc_auction_api_auc_message($node) {
+  drupal_set_message('Hey! hook_auc_message() can set a message too!');
+}

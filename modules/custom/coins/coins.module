@@ -57,7 +57,6 @@ function _uc_block() {
   $username = $user->name;
 
   $output = '<nav></nav><ul><li>' . l(t('My albums'), '/user/' . $username  . '/albums', array('attributes' => array('class' => array('')))) . '</nav>';
-  //$output = $output . '<li>' . l(t('Create album'), '/node/add/album', array('attributes' => array('class' => array('')))) . '</li></ul></nav>';
   return $output;
 }
 
