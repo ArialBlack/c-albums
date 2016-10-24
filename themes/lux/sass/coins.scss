@@ -1,5 +1,18 @@
-.album-page {
-    border: gray 1px solid;
+.page-node-add-coin,
+.page-node-edit.node-type-coin {
+    .coin-form {
+        .form-item-sell-price11,
+        .auction-field.collapsible {
+            display: none;
+        }
+
+        &.is-product {
+            .form-item-sell-price11,
+            .auction-field.collapsible {
+                display: block;
+            }
+        }
+    }
 }
 
 

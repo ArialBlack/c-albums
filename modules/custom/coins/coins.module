@@ -109,7 +109,15 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
       "#weight" => -2
     ) ;
 
-    $form['#submit'][] = 'coins_form_alter_submit_handler';
+    if ($is_product == 1) {
+      $form['#attributes']['class'][] = 'coin-form is-product';
+    } else {
+      $form['base']['prices']['sell_price']['#required'] = TRUE;
+    }
+  }
+
+  if ($form['#id'] == 'coin-node-form' && $form['nid']['#value'] != NULL) {
+    $form['#submit'][] = 'coins_form_alter_submit_handler_update';
   }
 
   if ($form['#id'] == 'coin-node-form' && $form['nid']['#value'] == NULL) {
@@ -139,11 +147,16 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
     dsm($form);
     $form['base']['prices']['list_price'] = FALSE;
     $form['base']['prices']['cost'] = FALSE;
+    $form['base']['prices']['cost'] = FALSE;
+    $form['base']['prices']['sell_price']['#required'] = FALSE;
     $form['base']['shippable'] = FALSE;
     $form['base']['ordering'] = FALSE;
     $form['base']['weight']['weight_units']['#disabled'] = TRUE;
     $form['base']['dimensions']['length_units']['#disabled'] = TRUE;
     $form['base']['pkg_qty'] = FALSE;
+
+    $form['#attributes']['class'][] = 'coin-form';
+    $form['#submit'][] = 'coins_form_alter_submit_handler_add';
 
   }
 
@@ -196,6 +209,15 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
   }
 }
 
-function coins_form_alter_submit_handler ($form, &$form_state) {
+function coins_form_alter_submit_handler_add ($form, &$form_state) {
   dsm($form_state['values']['is_product']);
+}
+
+function coins_form_alter_submit_handler_update ($form, &$form_state) {
+  db_update('uc_products')
+    ->fields(array(
+      'is_product' => $form_state['values']['is_product'],
+    ))
+    ->condition('nid', $form_state['values']['nid'])
+    ->execute();
 }

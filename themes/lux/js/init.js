@@ -20,6 +20,20 @@
 
       });
 
+      $('.form-item-is-product input:checkbox').change(function () {
+          var check = $(this).prop('checked'),
+              $form = $(this).parents('.coin-form');
+          if (check) {
+              $form.addClass('is-product');
+              $form.find('.form-item-sell-price input').addClass('required');
+              $form.find('span.form-required').show();
+          } else {
+              $form.removeClass('is-product');
+              $form.find('.form-item-sell-price input').removeClass('required');
+              $form.find('span.form-required').hide();
+          }
+      });
+
       /*$(window).on('selectDropdownInputChanged', function() {
           $val = $('.view-mycoinslist #user-album-select ul li.active span').text();
           console.log($val);

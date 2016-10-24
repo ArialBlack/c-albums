@@ -495,8 +495,10 @@ function uc_auction_node_insert($node){
 }
 
 function uc_auction_node_update($node){
+  dsm($node);
   // Did we do the validation above?
   if (isset($node->is_auction)){
+    dsm('2');
     $prev_expiry = db_query('SELECT expiry FROM {uc_auction} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField();
     if ($prev_expiry) {
       // This is a previously-existing auction. Are we baleeting it?
@@ -530,6 +532,7 @@ function uc_auction_node_update($node){
       }
     }
     else {
+      dsm('3');
       // This is a previously-existing product which is becoming an auction.
       $record = array(
         'nid' => $node->nid,
