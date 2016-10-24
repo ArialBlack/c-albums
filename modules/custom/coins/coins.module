@@ -3,6 +3,15 @@
 /**
 * Implements hook_block_info().
 */
+function generateRandomString($length = 24) {
+  $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_';
+  $charactersLength = strlen($characters);
+  $randomString = '';
+  for ($i = 0; $i < $length; $i++) {
+    $randomString .= $characters[rand(0, $charactersLength - 1)];
+  }
+  return $randomString;
+}
 
 function coins_entity_view($entity, $type, $view_mode, $langcode) {
     if ($view_mode == 'teaser' && $entity->type == 'coin' && isset($entity->content['field_coin'])) {
@@ -56,19 +65,56 @@ function _uc_block() {
   global $user;
   $username = $user->name;
 
-  $output = '<nav></nav><ul><li>' . l(t('My albums'), '/user/' . $username  . '/albums', array('attributes' => array('class' => array('')))) . '</nav>';
+  $output = '<nav></nav><ul><li>' . l(t('My albums'), '/user/' . $username  . '/albums', array('attributes' => array('class' => array('')))) . '</li>';
+  $output = $output . '<li>' . l(t('My coins'), '/user/' . $username  . '/coins', array('attributes' => array('class' => array('')))) . '</li></ul></nav>';
   return $output;
 }
 
 function coins_form_alter(&$form, &$form_state, $form_id) {
-  $STARTED_USER_COINS_LIMIT = 3;
+  $STARTED_USER_COINS_LIMIT = 10;
   $STARTED_USER_ALBUMS_LIMIT = 2;
 
   global $user;
   $current_user = $user->uid;
 
+  if ($form['#id'] == 'coin-node-form') {
+    if ($form['nid']['#value'] == NULL) {
+      $is_product = 0;
+    } else {
+      $is_product = db_select('uc_products', 'p')
+        ->fields('p', array('is_product'))
+        ->condition('p.nid', $form['nid']['#value'])
+        ->execute()
+        ->fetchField();
+
+      //ALTER PRODUCT FORM
+      $form['base']['model']['#default_value'] = generateRandomString();
+      $form['base']['model']['#access'] = FALSE;
+      dsm($form);
+      $form['base']['prices']['list_price'] = FALSE;
+      $form['base']['prices']['cost'] = FALSE;
+      $form['base']['shippable'] = FALSE;
+      $form['base']['ordering'] = FALSE;
+      $form['base']['weight']['weight_units']['#disabled'] = TRUE;
+      $form['base']['dimensions']['length_units']['#disabled'] = TRUE;
+      $form['base']['pkg_qty'] = FALSE;
+    }
+
+    $form['base']['is_product'] = array(
+      "#type" => "checkbox",
+      "#title" => t('I want to sell this coin'),
+      "#default_value" => $is_product,
+      "#disabled" => 0,
+      "#description" => null,
+      "#weight" => -2
+    ) ;
+
+    $form['#submit'][] = 'coins_form_alter_submit_handler';
+  }
+
   if ($form['#id'] == 'coin-node-form' && $form['nid']['#value'] == NULL) {
-    dsm($form);  // pretty print array using Krumo to messages
+    $is_product = 0;
+
     $query = db_select('node', 'n');
     $query->condition('n.type', 'coin');
     $query->condition('n.uid', $current_user);
@@ -86,6 +132,19 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
       drupal_set_message(t('Out of coins limit'), 'warning');
       drupal_goto('/node');
     }
+
+    //ALTER PRODUCT FORM
+    $form['base']['model']['#default_value'] = generateRandomString();
+    $form['base']['model']['#access'] = FALSE;
+    dsm($form);
+    $form['base']['prices']['list_price'] = FALSE;
+    $form['base']['prices']['cost'] = FALSE;
+    $form['base']['shippable'] = FALSE;
+    $form['base']['ordering'] = FALSE;
+    $form['base']['weight']['weight_units']['#disabled'] = TRUE;
+    $form['base']['dimensions']['length_units']['#disabled'] = TRUE;
+    $form['base']['pkg_qty'] = FALSE;
+
   }
 
   if ($form['#id'] == 'album-node-form' && $form['nid']['#value'] == NULL) {
@@ -102,7 +161,7 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
 
     drupal_set_message('albums count: ' . $albums_count, 'warning');
 
-    if ($albums_count >= $STARTED_USER_COINS_LIMIT + $albums_bonuslimit) {
+    if ($albums_count >= $STARTED_USER_ALBUMS_LIMIT + $albums_bonuslimit) {
       drupal_set_message(t('Out of albums limit'), 'warning');
       drupal_goto('/node');
     }
@@ -135,4 +194,8 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
       '#options' => $dropdown_array,
     );
   }
+}
+
+function coins_form_alter_submit_handler ($form, &$form_state) {
+  dsm($form_state['values']['is_product']);
 }
