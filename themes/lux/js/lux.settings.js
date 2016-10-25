@@ -2,7 +2,7 @@
 	$(document).ready(function() {
 
     //Enable Materialize select
-		$('select').material_select();
+	//$('select').material_select();
     //Enable Materialize Accordion
     $('.collapsible').collapsible({
       accordion : false

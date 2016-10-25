@@ -61,14 +61,4 @@ function coins_uninstall() {
   }
 }
 
-function coins_update_7100() {
-  $spec = array(
-    'type' => 'int',
-    'not null' => TRUE,
-    'size' => 'small',
-    'default' => 0,
-    'description' => 'Enable and disable products',
-  );
-  db_add_field( 'uc_products', 'is_product', $spec);
-}
 

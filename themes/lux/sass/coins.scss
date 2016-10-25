@@ -1,17 +1,20 @@
 .page-node-add-coin,
 .page-node-edit.node-type-coin {
     .coin-form {
-        .form-item-sell-price11,
-        .auction-field.collapsible {
+        #edit-prices {
             display: none;
         }
 
-        &.is-product {
-            .form-item-sell-price11,
-            .auction-field.collapsible {
+        &.just-sell {
+            #edit-auction  {
+                display: none;
+            }
+
+            #edit-prices {
                 display: block;
             }
         }
+
     }
 }
 

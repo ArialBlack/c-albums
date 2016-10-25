@@ -77,20 +77,15 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
   global $user;
   $current_user = $user->uid;
 
+  // EDIT OR NEW
   if ($form['#id'] == 'coin-node-form') {
-    if ($form['nid']['#value'] == NULL) {
-      $is_product = 0;
+    dsm($form);
+    /*if ($form['nid']['#value'] == NULL) {
     } else {
-      $is_product = db_select('uc_products', 'p')
-        ->fields('p', array('is_product'))
-        ->condition('p.nid', $form['nid']['#value'])
-        ->execute()
-        ->fetchField();
-
       //ALTER PRODUCT FORM
       $form['base']['model']['#default_value'] = generateRandomString();
       $form['base']['model']['#access'] = FALSE;
-      dsm($form);
+
       $form['base']['prices']['list_price'] = FALSE;
       $form['base']['prices']['cost'] = FALSE;
       $form['base']['shippable'] = FALSE;
@@ -98,30 +93,35 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
       $form['base']['weight']['weight_units']['#disabled'] = TRUE;
       $form['base']['dimensions']['length_units']['#disabled'] = TRUE;
       $form['base']['pkg_qty'] = FALSE;
-    }
+    }*/
+    $form['base']['model']['#access'] = FALSE;
 
-    $form['base']['is_product'] = array(
-      "#type" => "checkbox",
-      "#title" => t('I want to sell this coin'),
-      "#default_value" => $is_product,
-      "#disabled" => 0,
-      "#description" => null,
-      "#weight" => -2
-    ) ;
+    $form['base']['prices']['list_price'] = FALSE;
+    $form['base']['prices']['cost'] = FALSE;
+    $form['base']['shippable'] = FALSE;
+    $form['base']['ordering'] = FALSE;
+    $form['base']['weight']['weight_units']['#disabled'] = TRUE;
+    $form['base']['dimensions']['length_units']['#disabled'] = TRUE;
+    $form['base']['pkg_qty'] = FALSE;
 
-    if ($is_product == 1) {
-      $form['#attributes']['class'][] = 'coin-form is-product';
-    } else {
+    //dsm($form['field_sell_item']);
+    if (isset($form['field_sell_item']) && $form['field_sell_item']['und']['#default_value'] == 1) {
+      $form['#attributes']['class'][] = 'coin-form just-sell';
       $form['base']['prices']['sell_price']['#required'] = TRUE;
+    } else {
+      $form['#attributes']['class'][] = 'coin-form';
+      $form['base']['prices']['sell_price']['#required'] = FALSE;
     }
   }
 
+  //EDIT
   if ($form['#id'] == 'coin-node-form' && $form['nid']['#value'] != NULL) {
+
     $form['#submit'][] = 'coins_form_alter_submit_handler_update';
   }
 
+  //NEW
   if ($form['#id'] == 'coin-node-form' && $form['nid']['#value'] == NULL) {
-    $is_product = 0;
 
     $query = db_select('node', 'n');
     $query->condition('n.type', 'coin');
@@ -143,17 +143,16 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
 
     //ALTER PRODUCT FORM
     $form['base']['model']['#default_value'] = generateRandomString();
-    $form['base']['model']['#access'] = FALSE;
-    dsm($form);
-    $form['base']['prices']['list_price'] = FALSE;
-    $form['base']['prices']['cost'] = FALSE;
-    $form['base']['prices']['cost'] = FALSE;
-    $form['base']['prices']['sell_price']['#required'] = FALSE;
-    $form['base']['shippable'] = FALSE;
-    $form['base']['ordering'] = FALSE;
-    $form['base']['weight']['weight_units']['#disabled'] = TRUE;
-    $form['base']['dimensions']['length_units']['#disabled'] = TRUE;
-    $form['base']['pkg_qty'] = FALSE;
+    //$form['base']['model']['#access'] = FALSE;
+    //dsm($form);
+    //$form['base']['prices']['list_price'] = FALSE;
+    //$form['base']['prices']['cost'] = FALSE;
+    ////$form['base']['prices']['sell_price']['#required'] = FALSE;
+    //$form['base']['shippable'] = FALSE;
+    //$form['base']['ordering'] = FALSE;
+    //$form['base']['weight']['weight_units']['#disabled'] = TRUE;
+   // $form['base']['dimensions']['length_units']['#disabled'] = TRUE;
+   //$form['base']['pkg_qty'] = FALSE;
 
     $form['#attributes']['class'][] = 'coin-form';
     $form['#submit'][] = 'coins_form_alter_submit_handler_add';
@@ -210,14 +209,9 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
 }
 
 function coins_form_alter_submit_handler_add ($form, &$form_state) {
-  dsm($form_state['values']['is_product']);
+  //dsm($form_state['values']['is_product']);
 }
 
 function coins_form_alter_submit_handler_update ($form, &$form_state) {
-  db_update('uc_products')
-    ->fields(array(
-      'is_product' => $form_state['values']['is_product'],
-    ))
-    ->condition('nid', $form_state['values']['nid'])
-    ->execute();
+
 }
