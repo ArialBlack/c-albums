@@ -497,12 +497,12 @@ function uc_auction_node_insert($node){
 function uc_auction_node_update($node){
   dsm($node);
   // Did we do the validation above?
-  if (isset($node->is_auction)){
+  if (!empty($node->is_auction) || !empty($node->original->uc_auction)) {
     dsm('2');
     $prev_expiry = db_query('SELECT expiry FROM {uc_auction} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField();
     if ($prev_expiry) {
       // This is a previously-existing auction. Are we baleeting it?
-      if ($node->is_auction && $node->original->uc_auction['expiry'] !== NULL) {
+      if (!empty($node->is_auction) && $node->original->uc_auction['expiry'] !== NULL) {
         // This is a previously-existing auction with an updating expiry
         // time.
         $record = array(
