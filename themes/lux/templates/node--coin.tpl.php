@@ -104,15 +104,17 @@
     hide($content['comments']);
     hide($content['links']);
     hide($content['field_tags']);
-
   ?>
 
-  <?php if ($node->field_sell_item['und'][0]['value'] == 1): ?>
-    <?php
-      print render($content['sell_price']);
-      print render($content['add_to_cart']);
-    ?>
-  <?php endif; ?>
+  <?php
+  //dsm($node->field_sell_item);
+    if (count($node->field_sell_item) > 0)  {
+      if ($node->field_sell_item['und']['0']['value'] == 1) {
+        print render($content['sell_price']);
+        print render($content['add_to_cart']);
+      }
+    }
+  ?>
 
   <?php
     print render($content['uc_auction']);

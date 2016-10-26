@@ -30,6 +30,30 @@
     );
   }
 
+function calculate_median($arr) {
+  sort($arr);
+  $count = count($arr); //total numbers in array
+  $middleval = floor(($count-1)/2); // find the middle value, or the lowest middle value
+  if($count % 2) { // odd number, middle is the median
+    $median = $arr[$middleval];
+  } else { // even number, calculate avg of 2 medians
+    $low = $arr[$middleval];
+    $high = $arr[$middleval+1];
+    $median = (($low+$high)/2);
+  }
+  return $median;
+}
+
+function calculate_average($arr) {
+  $count = count($arr); //total numbers in array
+  $total = 0;
+  foreach ($arr as $value) {
+    $total = $total + $value; // total value of array numbers
+  }
+  $average = ($total/$count); // get average value
+  return $average;
+}
+
   function usercoinsrates_node_action_form($form, &$form_state, $node) {
     global $user;
     $current_user = $user->uid;
@@ -40,12 +64,16 @@
     $result = $query->execute();
 
     $rows = array();
+    $rates = array();
     $header = array(  'Estimation', 'User',  'Date');
+    $mediana = '';
 
     $already_submitted = false;
     $user_submitted_value = 0;
 
     while ($value = $result->fetchAssoc()) {
+      $rates[] = $value['estimation'];
+
       if ($value['uid'] == $current_user) {
         $already_submitted = true;
         $user_submitted_value = $value['estimation'];
@@ -69,6 +97,8 @@
           'class' => array('table', 'responsive-table', 'striped'),
         ),
       ));
+
+      $mediana = calculate_median($rates);
     } else {
       $table = '';
     }
@@ -94,6 +124,10 @@
         '#suffix' => '</p>',
       );
     }
+
+    $form['mediana'] = array(
+      '#markup' => $mediana,
+    );
 
     $form['table'] = array(
       '#markup' => $table,
