@@ -1,4 +1,6 @@
-<?php 
+<?php
+$GLOBALS['started_user_coins_limit'] = 10;
+$GLOBALS['started_user_albums_limit'] = 2;
 
 /**
 * Implements hook_block_info().
@@ -31,6 +33,10 @@ function coins_block_info() {
     'info' => t('User Collection'),
   );
 
+  $blocks['UserLimits'] = array(
+    'info' => t('User Limits'),
+  );
+
   return $blocks;
 }
 
@@ -50,6 +56,11 @@ function coins_block_view($delta = '') {
       $block['subject'] = '';
       $block['content'] = _uc_block();
       break;
+
+    case 'UserLimits':
+      $block['subject'] = '';
+      $block['content'] = _ulimits_block();
+      break;
   }
 
   return $block;
@@ -65,21 +76,71 @@ function _uc_block() {
   global $user;
   $username = $user->name;
 
-  $output = '<nav></nav><ul><li>' . l(t('My albums'), '/user/' . $username  . '/albums', array('attributes' => array('class' => array('')))) . '</li>';
-  $output = $output . '<li>' . l(t('My coins'), '/user/' . $username  . '/coins', array('attributes' => array('class' => array('')))) . '</li></ul></nav>';
+    $output = '<nav></nav><ul><li>' . l(t('My albums'), '/user/my-albums', array('attributes' => array('class' => array('')))) . '</li>';
+    $output = $output . '<li>' . l(t('My coins'), '/user/my-coins', array('attributes' => array('class' => array('')))) . '</li>';
+    $output = $output . '<li>' . l(t('Orders of my coins'), '/user/my-coins/orders', array('attributes' => array('class' => array('')))) . '</li>';
+    $output = $output . '<li>' . l(t('My auctions'), '/user/my-auctions', array('attributes' => array('class' => array('')))) . '</li></ul></nav>';
+
+  return $output;
+}
+
+function _ulimits_block() {
+  global $user;
+  $current_user = $user->uid;
+
+  $query = db_select('node', 'n');
+  $query->condition('n.type', 'coin');
+  $query->condition('n.uid', $current_user);
+  $query->addExpression('COUNT(*)');
+  $coins_count = $query->execute()->fetchField();
+  if(!$coins_count) {
+    $coins_count = 0;
+  }
+
+  $query = db_select('coins', 'c');
+  $query->condition('c.uid', $current_user);
+  $query->addExpression('SUM(c.coins)');
+  $coins_bonuslimit = $query->execute()->fetchField();
+  if(!$coins_bonuslimit){
+    $coins_bonuslimit = 0;
+  }
+
+  $query = db_select('node', 'n');
+  $query->condition('n.type', 'album');
+  $query->condition('n.uid', $current_user);
+  $query->addExpression('COUNT(*)');
+  $albums_count = $query->execute()->fetchField();
+  if(!$albums_count) {
+    $albums_count = 0;
+  }
+
+  $query = db_select('coins', 'c');
+  $query->condition('c.uid', $current_user);
+  $query->addExpression('SUM(c.albums)');
+  $albums_bonuslimit = $query->execute()->fetchField();
+  if(!$albums_bonuslimit){
+    $albums_bonuslimit = 0;
+  }
+
+  $output = '<h3>'. t('My current limits are:') .'</h3>';
+  $output = $output . '<h6>' .t('Coins: ') . '<b>' . (intval($GLOBALS['started_user_coins_limit']) + intval($coins_bonuslimit) - intval($coins_count)) . '</b>' . t(' left (started limit: '). $GLOBALS['started_user_coins_limit']
+    . t(' + your purchased bonuses: ') . $coins_bonuslimit . t(' - already added coins: ') . $coins_count .')<h6>';
+  $output = $output . '<h6>' .t('Albums: ') . '<b>' . (intval($GLOBALS['started_user_albums_limit']) + intval($albums_bonuslimit) - intval($albums_count)) . '</b>' . t(' left (started limit: '). $GLOBALS['started_user_albums_limit']
+    . t(' + your purchased bonuses: ') . $albums_bonuslimit . t(' - already added albums: ') . $albums_count .')<h6>';
+  $output = $output . l(t('Raise limits'), '/buy', array('attributes' => array('class' => array('btn', 'btn-default'))));
   return $output;
 }
 
 function coins_form_alter(&$form, &$form_state, $form_id) {
-  $STARTED_USER_COINS_LIMIT = 10;
-  $STARTED_USER_ALBUMS_LIMIT = 2;
-
   global $user;
   $current_user = $user->uid;
 
   // EDIT OR NEW
   if ($form['#id'] == 'coin-node-form') {
     dsm($form);
+
+
+
     /*if ($form['nid']['#value'] == NULL) {
     } else {
       //ALTER PRODUCT FORM
@@ -94,7 +155,9 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
       $form['base']['dimensions']['length_units']['#disabled'] = TRUE;
       $form['base']['pkg_qty'] = FALSE;
     }*/
-    $form['base']['model']['#access'] = FALSE;
+    //$form['base']['model']['#access'] = FALSE;
+
+      //$form['base']['prices']['sell_price'] = TRUE;
 
     $form['base']['prices']['list_price'] = FALSE;
     $form['base']['prices']['cost'] = FALSE;
@@ -104,20 +167,24 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
     $form['base']['dimensions']['length_units']['#disabled'] = TRUE;
     $form['base']['pkg_qty'] = FALSE;
 
+      $form['base']['dimensions']['dim_width'] = FALSE;
+      $form['base']['dimensions']['dim_length']['#title'] =  t('Diameter');
+
     //dsm($form['field_sell_item']);
+
     if (isset($form['field_sell_item']) && $form['field_sell_item']['und']['#default_value'] == 1) {
       $form['#attributes']['class'][] = 'coin-form just-sell';
-      $form['base']['prices']['sell_price']['#required'] = TRUE;
+      //$form['base']['prices']['sell_price']['#required'] = TRUE;
     } else {
       $form['#attributes']['class'][] = 'coin-form';
-      $form['base']['prices']['sell_price']['#required'] = FALSE;
+      //$form['base']['prices']['sell_price']['#required'] = FALSE;
     }
   }
 
   //EDIT
   if ($form['#id'] == 'coin-node-form' && $form['nid']['#value'] != NULL) {
 
-    $form['#submit'][] = 'coins_form_alter_submit_handler_update';
+    //$form['#submit'][] = 'coins_form_alter_submit_handler_update';
   }
 
   //NEW
@@ -136,15 +203,15 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
 
     drupal_set_message('coins count: ' . $coins_count, 'warning');
 
-    if ($coins_count >= $STARTED_USER_COINS_LIMIT + $coins_bonuslimit) {
+    if ($coins_count >= $GLOBALS['started_user_coins_limit'] + $coins_bonuslimit) {
       drupal_set_message(t('Out of coins limit'), 'warning');
       drupal_goto('/node');
     }
-
+     // dsm($form);
     //ALTER PRODUCT FORM
     $form['base']['model']['#default_value'] = generateRandomString();
     //$form['base']['model']['#access'] = FALSE;
-    //dsm($form);
+    //
     //$form['base']['prices']['list_price'] = FALSE;
     //$form['base']['prices']['cost'] = FALSE;
     ////$form['base']['prices']['sell_price']['#required'] = FALSE;
@@ -155,7 +222,7 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
    //$form['base']['pkg_qty'] = FALSE;
 
     $form['#attributes']['class'][] = 'coin-form';
-    $form['#submit'][] = 'coins_form_alter_submit_handler_add';
+    //$form['#submit'][] = 'coins_form_alter_submit_handler_add';
 
   }
 
@@ -173,16 +240,16 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
 
     drupal_set_message('albums count: ' . $albums_count, 'warning');
 
-    if ($albums_count >= $STARTED_USER_ALBUMS_LIMIT + $albums_bonuslimit) {
+    if ($albums_count >= $GLOBALS['started_user_albums_limit'] + $albums_bonuslimit) {
       drupal_set_message(t('Out of albums limit'), 'warning');
       drupal_goto('/node');
     }
   }
 
-  if ($form['#id'] == 'views-exposed-form-mycoinslist-entityreference-view-widget-1') {
+  if ($form['#id'] == 'views-exposed-form-mycoinslist-entityreference-view-widget-1' || $form['#id'] == 'views-exposed-form-my-coins-page') {
 
-    $quartiers[] = array('ALL' => t('- Any -'));
-    unset ($form['my_almum_title']);
+    //$quartiers[] = array('ALL' => t('- Any -'));
+    unset ($form['my_album_title']);
 
     global $user;
     $current_user = $user->uid;
@@ -200,12 +267,91 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
       $dropdown_array[$node->title] = $node->title;
     }
 
-    $form['my_almum_title'] = array(
+    $form['my_album_title'] = array(
       '#type' => 'select',
       '#default_value' => '1',
       '#options' => $dropdown_array,
     );
   }
+
+  if ($form['#id'] == 'uc-order-view-update-form') {
+      //dsm($form);
+      $current_status = $form['current_status']['#value'];
+      $order = $form['order_id']['#value'];
+      //if ($current_status != 'Was received' && )
+
+      $query = db_select('uc_order_products', 'op');
+      $query->fields('op', array('nid'));
+      $query->condition('op.order_id', $order);
+      $nid = $query->execute()->fetchField();
+
+      $query = db_select('uc_orders', 'o');
+      $query->fields('o', array('uid'));
+      $query->condition('o.order_id', $order);
+      $uid = $query->execute()->fetchField();
+
+
+      if($nid !== FALSE) {
+          $node = node_load($nid);
+          $author = $node->uid;
+          $options = $form['controls']['status']['#options'];
+
+
+          if ($author == $current_user) {
+              //action for seller
+              dsm('SELLER');
+              unset($options['abandoned']);
+              unset($options['canceled']);
+              unset($options['pending']);
+              unset($options['in_checkout']);
+              unset($options['was_payed']);
+              unset($options['processing']);
+              unset($options['completed']);
+              unset($options['paypal_pending']);
+              unset($options['was_received']);
+              $form['controls']['status']['#options'] = $options;
+
+          } else if ($uid == $current_user ) {
+              //action for buyer
+              dsm('Buyer');
+
+              unset($options['abandoned']);
+              unset($options['pending']);
+              unset($options['in_checkout']);
+              unset($options['processing']);
+              unset($options['completed']);
+              unset($options['paypal_pending']);
+              unset($options['has_been_sent']);
+              unset($options['payment_received']);
+              $form['controls']['status']['#options'] = $options;
+          } else {
+              //action for someone else
+              drupal_goto('/403');
+          }
+      }
+/*
+ * <option value="abandoned">Abandoned</option>
+<option value="canceled">Canceled</option>
+<option value="in_checkout">In checkout</option>
+<option value="pending" selected="selected">Pending</option>
+<option value="was_payed">Was paid</option>
+<option value="processing">Processing</option>
+<option value="completed">Completed</option>
+<option value="paypal_pending">PayPal pending</option>
+<option value="payment_received">Payment received</option>
+<option value="has_been_sent ">Has been sent </option>
+<option value="was_received ">Was received </option>
+ */
+
+
+
+
+
+  }
+}
+
+function coins_uc_order_pane_alter($panes) {
+  //  dsm($panes['update']);
 }
 
 function coins_form_alter_submit_handler_add ($form, &$form_state) {

@@ -79,9 +79,6 @@
  * @ingroup templates
  */
 
-global $user;
-$current_user = $user->uid;
-$author = $node->uid;
 
 ?>
 <article id="node-<?php print $node->nid; ?>" class="<?php print $classes; ?> clearfix"<?php print $attributes; ?>>
@@ -93,13 +90,6 @@ $author = $node->uid;
     <?php endif; ?>
     <?php print render($title_suffix); ?>
 
-    <?php if ($display_submitted): ?>
-    <span class="submitted">
-      <?php print $user_picture; ?>
-      <?php print $submitted; ?>
-    </span>
-    <?php endif; ?>
-
   </header>
   <?php endif; ?>
   <?php
@@ -107,25 +97,14 @@ $author = $node->uid;
     hide($content['comments']);
     hide($content['links']);
     hide($content['field_tags']);
+  hide($content);
   ?>
 
   <?php
     print render($content['field_coin']);
 
-  //dsm($node->field_sell_item);
-
-  if (count($node->field_sell_item) > 0 && $current_user != $author )  {
-      if ($node->field_sell_item['und']['0']['value'] == 1) {
-        print render($content['sell_price']);
-        print render($content['add_to_cart']);
-      }
-    }
   ?>
 
-  <?php
-    print render($content['uc_auction']);
-    print render($content['uc_auction_now']);
-  ?>
 
   <?php if (!empty($content['field_tags']) || !empty($content['links'])): ?>
   <footer>

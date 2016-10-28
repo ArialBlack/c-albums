@@ -31,12 +31,12 @@
           if (check) {
               $form.addClass('just-sell');
               $form.find('.form-item-sell-price input').addClass('required');
-              $form.find('.form-item-sell-price label').html($form.find('.form-item-sell-price label').html() + '<span class="form-required" title="This field is required.">*</span>');
-              $form.find('span.form-required').show();
+              //$form.find('.form-item-sell-price label').html($form.find('.form-item-sell-price label').html() + '<span class="form-required" title="This field is required.">*</span>');
+              //$form.find('span.form-required').show();
           } else {
               $form.removeClass('just-sell');
-              $form.find('.form-item-sell-price input').removeClass('required');
-              $form.find('span.form-required').hide();
+              //$form.find('.form-item-sell-price input').removeClass('required');
+              //$form.find('span.form-required').hide();
           }
       });
 
