@@ -1,6 +1,24 @@
+
 <?php
 $GLOBALS['started_user_coins_limit'] = 10;
 $GLOBALS['started_user_albums_limit'] = 2;
+
+/*function coins_menu() {
+    $items = array();
+
+    $items['admin/sellers-to-pay'] = array(
+    'title' => t('Sellers who own money to service'),
+    'page callback' => '_sellers_owns_money',
+    'access arguments' => array('administer users'),
+    );
+
+    return $items;
+}
+
+function _sellers_owns_money () {
+    $output = "123";
+    return $output;
+}*/
 
 /**
 * Implements hook_block_info().
@@ -275,6 +293,7 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
   }
 
   if ($form['#id'] == 'uc-order-view-update-form') {
+
       //dsm($form);
       $current_status = $form['current_status']['#value'];
       $order = $form['order_id']['#value'];
@@ -316,6 +335,7 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
               dsm('Buyer');
 
               unset($options['abandoned']);
+              unset($options['canceled']);
               unset($options['pending']);
               unset($options['in_checkout']);
               unset($options['processing']);
@@ -324,6 +344,9 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
               unset($options['has_been_sent']);
               unset($options['payment_received']);
               $form['controls']['status']['#options'] = $options;
+          } else if ($author == $current_user && $uid == $current_user) {
+              dsm('new owner');
+              unset($options);
           } else {
               //action for someone else
               drupal_goto('/403');
@@ -342,22 +365,79 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
 <option value="has_been_sent ">Has been sent </option>
 <option value="was_received ">Was received </option>
  */
-
-
-
-
-
   }
 }
 
-function coins_uc_order_pane_alter($panes) {
-  //  dsm($panes['update']);
+/**
+ * Implements hook_rules_condition_info().
+ */
+function coins_rules_condition_info() {
+    return array(
+        'rules_condition_order_qty' => array(
+            'label' => t('Evaluate shopping cart quantity'),
+            'parameter' => array(
+                'cart_id' => array(
+                    'label' => t('Cart ID'),
+                    'type' => 'text',
+                ),
+                'max_cart_qty' => array(
+                    'label' => t('Maximum Cart Quantity'),
+                    'type' => 'text',
+                ),
+            ),
+            'group' => t('Cart'),
+            'callbacks' => array(
+                'execute' => 'cart_is_maxed_out',
+            ),
+        ),
+    );
 }
 
-function coins_form_alter_submit_handler_add ($form, &$form_state) {
-  //dsm($form_state['values']['is_product']);
+function coins_rules_action_info() {
+    $actions = array(
+        'coins_action_hello_user' => array(
+            'label' => t('Delete last added item'),
+            'group' => t('Coins rules'),
+            'callbacks' => array(
+                'execute' => 'cart_is_maxed_out_delete',
+            ),
+
+        ),
+    );
+    return $actions;
 }
 
-function coins_form_alter_submit_handler_update ($form, &$form_state) {
+/**
+ * Return true if cart quantity exceeds maximum cart quantity set in the rule.
+ */
+function cart_is_maxed_out($cart_id, $max_cart_qty) {
+    $query = db_select('uc_cart_products');
+    $query->condition('cart_id', $cart_id);
+    $query->addExpression('SUM(qty)');
+    $result = $query->execute()->fetchField();
 
+    if ($result >= $max_cart_qty) {
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+function cart_is_maxed_out_delete() {
+    global $user;
+    $current_user = $user->uid;
+
+    $query = db_select('uc_cart_products', 'u');
+    $query->fields('u', array('cart_item_id'));
+    $query->condition('u.cart_id', $current_user);
+    $query->range(0, 1);
+    $query->orderBy('u.changed', 'DESC');
+    $result = $query->execute()->fetchField();
+
+    db_delete('uc_cart_products')
+        ->condition('cart_item_id', $result)
+        ->execute();
+
+    return true;
 }

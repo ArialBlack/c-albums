@@ -125,6 +125,7 @@ $author = $node->uid;
   <?php
     print render($content['uc_auction']);
     print render($content['uc_auction_now']);
+    print render($content['album_list_entity_view_1']);
   ?>
 
   <?php if (!empty($content['field_tags']) || !empty($content['links'])): ?>
