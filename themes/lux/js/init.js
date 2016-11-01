@@ -13,6 +13,10 @@
 
           $myselect = $('select');//.not('.field-widget-taxonomy-shs select');
           $myselect.material_select();
+          $('.tooltipped').tooltip({
+              delay: 50,
+              html: true
+          });
       });
 
       $(document).on('CToolsAttachBehaviors', function () {

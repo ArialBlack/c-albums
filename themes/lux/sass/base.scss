@@ -208,3 +208,9 @@ tr.even,
 tr.odd {
   background: none;
 }
+
+.filter-wrapper {
+  .collapsible-body {
+    display: block !important;
+  }
+}

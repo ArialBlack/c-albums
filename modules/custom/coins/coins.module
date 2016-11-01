@@ -3,22 +3,63 @@
 $GLOBALS['started_user_coins_limit'] = 10;
 $GLOBALS['started_user_albums_limit'] = 2;
 
-/*function coins_menu() {
+function coins_menu() {
     $items = array();
 
-    $items['admin/sellers-to-pay'] = array(
-    'title' => t('Sellers who own money to service'),
-    'page callback' => '_sellers_owns_money',
-    'access arguments' => array('administer users'),
+    $items['user/my-limits'] = array(
+    'title' => 'My limits',
+    'page callback' => '_my_limits',
+        'access callback' => TRUE, //'user_is_logged_in'
     );
 
     return $items;
 }
 
-function _sellers_owns_money () {
-    $output = "123";
+function _my_limits () {
+    global $user;
+    $current_user = $user->uid;
+
+    $query = db_select('node', 'n');
+    $query->condition('n.type', 'coin');
+    $query->condition('n.uid', $current_user);
+    $query->addExpression('COUNT(*)');
+    $coins_count = $query->execute()->fetchField();
+    if(!$coins_count) {
+        $coins_count = 0;
+    }
+
+    $query = db_select('coins', 'c');
+    $query->condition('c.uid', $current_user);
+    $query->addExpression('SUM(c.coins)');
+    $coins_bonuslimit = $query->execute()->fetchField();
+    if(!$coins_bonuslimit){
+        $coins_bonuslimit = 0;
+    }
+
+    $query = db_select('node', 'n');
+    $query->condition('n.type', 'album');
+    $query->condition('n.uid', $current_user);
+    $query->addExpression('COUNT(*)');
+    $albums_count = $query->execute()->fetchField();
+    if(!$albums_count) {
+        $albums_count = 0;
+    }
+
+    $query = db_select('coins', 'c');
+    $query->condition('c.uid', $current_user);
+    $query->addExpression('SUM(c.albums)');
+    $albums_bonuslimit = $query->execute()->fetchField();
+    if(!$albums_bonuslimit){
+        $albums_bonuslimit = 0;
+    }
+
+    $output ='<h6>' .t('Coins: ') . '<b>' . (intval($GLOBALS['started_user_coins_limit']) + intval($coins_bonuslimit) - intval($coins_count)) . '</b>' . t(' left (started limit: '). $GLOBALS['started_user_coins_limit']
+  . t(' + your purchased bonuses: ') . $coins_bonuslimit . t(' - already added coins: ') . $coins_count .')<h6>';
+$output = $output . '<h6>' .t('Albums: ') . '<b>' . (intval($GLOBALS['started_user_albums_limit']) + intval($albums_bonuslimit) - intval($albums_count)) . '</b>' . t(' left (started limit: '). $GLOBALS['started_user_albums_limit']
+  . t(' + your purchased bonuses: ') . $albums_bonuslimit . t(' - already added albums: ') . $albums_count .')<h6>';
+$output = $output . l(t('Raise limits'), '/buy', array('attributes' => array('class' => array('btn', 'btn-default'))));
     return $output;
-}*/
+}
 
 /**
 * Implements hook_block_info().
@@ -47,9 +88,6 @@ function coins_block_info() {
     'info' => t('User Actions'),
   );
 
-  $blocks['UserCollection'] = array(
-    'info' => t('User Collection'),
-  );
 
   $blocks['UserLimits'] = array(
     'info' => t('User Limits'),
@@ -70,11 +108,6 @@ function coins_block_view($delta = '') {
       $block['content'] = _ua_block();
       break;
 
-    case 'UserCollection':
-      $block['subject'] = '';
-      $block['content'] = _uc_block();
-      break;
-
     case 'UserLimits':
       $block['subject'] = '';
       $block['content'] = _ulimits_block();
@@ -85,22 +118,35 @@ function coins_block_view($delta = '') {
 }
 
 function _ua_block() {
-  $output = '<nav></nav><ul><li>' . l(t('Add coin'), '/node/add/coin', array('attributes' => array('class' => array('')))) . '</li>';
-  $output = $output . '<li>' . l(t('Create album'), '/node/add/album', array('attributes' => array('class' => array('')))) . '</li></ul></nav>';
-  return $output;
+    global $user;
+
+    $output = '<nav></nav><ul><li><a href="/node/add/coin"><i class="icon ion-plus-circled"></i>' . t('Add coin') . '</a></li>';
+    $output = $output . '<li><a href="/node/add/album"><i class="icon ion-ios-photos"></i><i class="icon ion-plus-circled"></i>' . t('Create album') . '</a></li>';
+    $output = $output . '<li class="separator"></li>';
+    $output = $output . '<li><a href="/user/my-coins"><i class="icon ion-social-euro"></i>' . t('My coins') . '</a></li>';
+    $output = $output . '<li><a href="/user/my-albums"><i class="icon ion-ios-photos"></i>' . t('My albums') . '</a></li>';
+    $output = $output . '<li class="separator"></li>';
+    $output = $output . '<li><a href="/user/my-coins/sales"><i class="icon ion-social-usd"></i>' . t('My sales') . '</a></li>';
+    $output = $output . '<li><a href="/user/my-auctions"><i class="icon ion-arrow-graph-up-right"></i>' . t('My auctions') . '</a></li>';
+    $output = $output . '<li><a href="/user/my-orders"><i class="icon ion-ios-cart"></i>' . t('My orders') . '</a></li>';
+    $output = $output . '<li><a href="/user/' . $user->uid .'/auctions"><i class="icon ion-clock"></i>' . t('My last bids') . '</a></li>';
+    $output = $output . '<li class="separator"></li>';
+    $output = $output . '<li><a href="/user"></i>' . t('My profile') . '</a></li>';
+    $output = $output . '<li><a href="/user/logout">' . t('Logout') . '</a></li>';
+    $output = $output . '</ul></nav>';
+    return $output;
 }
 
-function _uc_block() {
-  global $user;
-  $username = $user->name;
+/*function _uc_block() {
 
-    $output = '<nav></nav><ul><li>' . l(t('My albums'), '/user/my-albums', array('attributes' => array('class' => array('')))) . '</li>';
-    $output = $output . '<li>' . l(t('My coins'), '/user/my-coins', array('attributes' => array('class' => array('')))) . '</li>';
+
+    $output = '<nav></nav><ul>';
+
     $output = $output . '<li>' . l(t('Orders of my coins'), '/user/my-coins/orders', array('attributes' => array('class' => array('')))) . '</li>';
     $output = $output . '<li>' . l(t('My auctions'), '/user/my-auctions', array('attributes' => array('class' => array('')))) . '</li></ul></nav>';
 
   return $output;
-}
+}*/
 
 function _ulimits_block() {
   global $user;
@@ -115,14 +161,6 @@ function _ulimits_block() {
     $coins_count = 0;
   }
 
-  $query = db_select('coins', 'c');
-  $query->condition('c.uid', $current_user);
-  $query->addExpression('SUM(c.coins)');
-  $coins_bonuslimit = $query->execute()->fetchField();
-  if(!$coins_bonuslimit){
-    $coins_bonuslimit = 0;
-  }
-
   $query = db_select('node', 'n');
   $query->condition('n.type', 'album');
   $query->condition('n.uid', $current_user);
@@ -132,22 +170,75 @@ function _ulimits_block() {
     $albums_count = 0;
   }
 
-  $query = db_select('coins', 'c');
-  $query->condition('c.uid', $current_user);
-  $query->addExpression('SUM(c.albums)');
-  $albums_bonuslimit = $query->execute()->fetchField();
-  if(!$albums_bonuslimit){
-    $albums_bonuslimit = 0;
-  }
+  $file = file_load($user->picture);
 
-  $output = '<h3>'. t('My current limits are:') .'</h3>';
-  $output = $output . '<h6>' .t('Coins: ') . '<b>' . (intval($GLOBALS['started_user_coins_limit']) + intval($coins_bonuslimit) - intval($coins_count)) . '</b>' . t(' left (started limit: '). $GLOBALS['started_user_coins_limit']
-    . t(' + your purchased bonuses: ') . $coins_bonuslimit . t(' - already added coins: ') . $coins_count .')<h6>';
-  $output = $output . '<h6>' .t('Albums: ') . '<b>' . (intval($GLOBALS['started_user_albums_limit']) + intval($albums_bonuslimit) - intval($albums_count)) . '</b>' . t(' left (started limit: '). $GLOBALS['started_user_albums_limit']
-    . t(' + your purchased bonuses: ') . $albums_bonuslimit . t(' - already added albums: ') . $albums_count .')<h6>';
-  $output = $output . l(t('Raise limits'), '/buy', array('attributes' => array('class' => array('btn', 'btn-default'))));
+
+  if($file) {
+      $uri = $file->uri;
+      $img = image_style_url("profile_picture", $uri);
+  } else {
+      $img = "/sites/default/files/profile.png";
+   }
+
+  $output = '<div class="media"><div class="media-left"><a href="#"><img class="media-object" src="' . $img . '" alt="avatar"></a></div>';
+  $output = $output . '<div class="media-body"><h4 class="media-heading">' . $user->name .'</h4>';
+  $output = $output . $coins_count . ' ' . t('coins(s)') . ' / ' . $albums_count . ' ' . t('album(s)') . ' <sup><a href="/user/my-limits"><i class="icon ion-help-circled"></i></a></sup>';
+  $output = $output . userpoints_get_current_points($user->uid, 'all') . ' ' . t('user points') . ' <sup><a href="/user/' . $user->uid . '/points"><i class="icon ion-help-circled"></i></a></sup>';
+  $output = $output .  '</div></div>';
   return $output;
 }
+
+function coins_taxonomy_tree($vid) {
+    $terms = db_query("
+    SELECT td.tid, td.name, th.parent, (
+      SELECT COUNT(*) FROM {taxonomy_index} ti
+      LEFT JOIN {node} n ON ti.nid = n.nid
+      WHERE ti.tid = td.tid AND n.status = 1
+    ) node_count FROM {taxonomy_term_data} td
+    INNER JOIN {taxonomy_term_hierarchy} th ON th.tid = td.tid
+    WHERE vid = :vid
+    ORDER BY weight
+  ", array(':vid' => $vid))->fetchAll();
+
+    return theme('item_list', array('items' => _coins_taxonomy_tree($terms)));
+}
+
+/**
+ * Helper for mymodule_taxonomy_tree()
+ */
+function _coins_taxonomy_tree($terms, $parent = 0, &$node_count = 0) {
+    $items = array();
+    $node_count = 0;
+
+    foreach ($terms as $term) {
+        if ($term->parent == $parent) {
+            $children = _coins_taxonomy_tree($terms, $term->tid, $childs_node_count);
+            $node_count += $term->node_count + $childs_node_count;
+            $termload = taxonomy_term_load($term->tid);
+            if ($termload->field_cover_image) {
+                $img_url = $termload->field_cover_image['und'][0]['uri'];
+                $img = '<img class="activator" src="' . image_style_url("taxonomy_card", $img_url) . '"/>';
+            } else {
+                $img = '<img class="activator" src="http://placekitten.com/g/280/280"/>';
+            }
+
+            $cardtemplate = '<div class="card"><div class="card-image waves-effect waves-block waves-light"><a href="/taxonomy/term/' .$term->tid  . '">' . $img . '</a></div>';
+            $cardtemplate = $cardtemplate . '<div class="card-content"><span class="card-title activator grey-text text-darken-4">' . $term->name . '<i class="icon ion-android-more-vertical"></i></span>';
+            $cardtemplate = $cardtemplate . '<p>' . ($term->node_count + $childs_node_count) .'</p></div>';
+            $cardtemplate = $cardtemplate . '<div class="card-reveal"><span class="card-title grey-text text-darken-4">' . $term->name . '<i class="icon ion-android-close"></i></span>';
+            $cardtemplate = $cardtemplate . '<p>Here is some more information about this product that is only revealed once clicked on.</p></div></div>';
+
+            $items[] = array(
+                'data' =>  $cardtemplate, //'<a href="/taxonomy/term/' . $term->tid  . '">' . $img . $term->name . ($term->node_count + $childs_node_count) .'</a>',
+                'children' => $children,
+            );
+        }
+    }
+
+    return $items;
+}
+
+//echo mymodule_taxonomy_tree(1);
 
 function coins_form_alter(&$form, &$form_state, $form_id) {
   global $user;
