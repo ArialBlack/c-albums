@@ -1,9 +1,30 @@
 #catalog-tree {
+  ul, li {
+    //reset
+    margin: 0;
+    padding: 0;
+  }
+
+  li {
+    display: inline-block;
+  }
+
   > .item-list > ul > li .item-list {
     display: none;
 
     &.open {
       display: block;
+    }
+  }
+
+  .card {
+    max-width: 300px;
+    display: inline-block;
+    vertical-align: top;
+    margin: 8px;
+
+    .card-hidden-title {
+      display: none;
     }
   }
 }

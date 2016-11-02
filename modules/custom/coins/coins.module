@@ -231,9 +231,9 @@ function _coins_taxonomy_tree($terms, $parent = 0, &$node_count = 0) {
             } else {
                 $img = '<img class="activator" src="http://placekitten.com/g/280/280"/>';
             }
-
-            $cardtemplate = '<div class="card"><div class="card-image waves-effect waves-block waves-light"><a href="/taxonomy/term/' .$term->tid  . '">' . $img . '</a></div>';
-            $cardtemplate = $cardtemplate . '<div class="card-content">' . $term->name;
+            $class_name = generateRandomClass();
+            $cardtemplate = '<div class="card" data-cardid="' .$class_name . '"><div class="card-image waves-effect waves-block waves-light"><a data-cardid="' .$class_name . '" class="card-link" href="/taxonomy/term/' .$term->tid  . '">' . $img . '<span class="card-hidden-title">' . $term->name . '</span></a></div>';
+            $cardtemplate = $cardtemplate . '<div class="card-content"><span class="card-title">' . $term->name . '</span>';
 
             if ($termload->description) {
                 $cardtemplate = $cardtemplate . '<span class="card-title activator grey-text text-darken-4"><i class="icon ion-android-more-vertical"></i></span>';
@@ -250,8 +250,8 @@ function _coins_taxonomy_tree($terms, $parent = 0, &$node_count = 0) {
 
 
             $items[] = array(
-                'data' =>  '<a href="/taxonomy/term/' . $term->tid  . '" class="' . generateRandomClass() . '">'  . $term->name .'</a>',
-                ///'data' =>  $cardtemplate,
+                //'data' =>  '<a href="/taxonomy/term/' . $term->tid  . '" class="' . generateRandomClass() . '">'  . $term->name .'</a>',
+                'data' =>  $cardtemplate,
                 'children' => $children,
             );
         }

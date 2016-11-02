@@ -19,45 +19,45 @@
               html: true
           });
 
-          $('#catalog-tree li a').click(function( event ) {
+          $('#catalog-tree li .card-link').click(function( event ) {
               $link = $(this);
-              $next =  $link.next();
-              console.log($link.parents("ul").length);
-              //
+              $card = $link.parents('.card');
+              $next =  $card.next();
+
               if($next.hasClass('item-list')) {
-                  $insertlink = $link.clone().prop('outerHTML');
-                  $link.addClass('hide');
-                  $link.parent('li').siblings().addClass('hide');
+                  event.preventDefault();
+
+                  $insertlink = $link.clone();
+                  $insertlink.find('img').remove();
+                  $insertlink = $insertlink.prop('outerHTML');
+
+                  $card.addClass('hide');
+                  $card.parent('li').siblings().addClass('hide');
                   $navhtml = $('#catalog-nav').html();
                   $('#catalog-nav').html($navhtml + $insertlink);
                   $next.addClass('open');
                   $next.find('> ul > li').removeClass('hide');
-                  $next.find('> ul > li > a').removeClass('hide');
+                  $next.find('> ul > li > .card').removeClass('hide');
                   $next.find('> ul > li .open').removeClass('open');
-                  event.preventDefault();
               }
           });
 
           $(document).on('click', $('#catalog-nav a'), function( event ) {
+              $navlink = $(event.target).parent('.card-link');
 
-              $navlink = $(event.target);
               if ($navlink.parent('#catalog-nav').length > 0 ) {
-                  $selector = $('.' + $navlink.attr('class'));
-                  $chainnedLink =  $('#catalog-tree').find($selector);
-                  $chainnedLink.removeClass('hide');
-                  //elIndex = $('#catalog-nav a').index($navlink); //zero based
-                  $('#catalog-nav').find($selector).nextAll().remove();
-                  $('#catalog-nav').find($selector).remove();
-                  //console.log(elIndex);
                   event.preventDefault();
+
+                  cardid = $navlink.data('cardid');
+                  $chainnedLink =  $('#catalog-tree').find('.card[data-cardid="' + cardid + '"]');
+                  $chainnedLink.removeClass('hide');
+                  $('#catalog-nav').find($navlink).nextAll().remove();
+                  $('#catalog-nav').find($navlink).remove();
 
                   $chainnedLink.parent('li').siblings().removeClass('hide');
                   $chainnedLink.siblings().removeClass('open');
-
               }
-
           });
-
       });
 
       $(document).on('CToolsAttachBehaviors', function () {

@@ -104,7 +104,8 @@
   </div>
 </header>
 
-<main><div class="container">
+<main>
+    <div class="full-container">
     <div class="row">
 
       <div class="col s12">
