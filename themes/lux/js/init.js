@@ -22,16 +22,18 @@
           $('#catalog-tree li a').click(function( event ) {
               $link = $(this);
               $next =  $link.next();
-              //console.log($next);
+              console.log($link.parents("ul").length);
               //
               if($next.hasClass('item-list')) {
-                 // $('.item-list').removeClass('open');
                   $insertlink = $link.clone().prop('outerHTML');
                   $link.addClass('hide');
                   $link.parent('li').siblings().addClass('hide');
                   $navhtml = $('#catalog-nav').html();
                   $('#catalog-nav').html($navhtml + $insertlink);
                   $next.addClass('open');
+                  $next.find('> ul > li').removeClass('hide');
+                  $next.find('> ul > li > a').removeClass('hide');
+                  $next.find('> ul > li .open').removeClass('open');
                   event.preventDefault();
               }
           });
@@ -39,16 +41,19 @@
           $(document).on('click', $('#catalog-nav a'), function( event ) {
 
               $navlink = $(event.target);
-              //console.log($navlink.parent('#catalog-nav').length);
               if ($navlink.parent('#catalog-nav').length > 0 ) {
                   $selector = $('.' + $navlink.attr('class'));
-                  //console.log($selector);
                   $chainnedLink =  $('#catalog-tree').find($selector);
                   $chainnedLink.removeClass('hide');
+                  //elIndex = $('#catalog-nav a').index($navlink); //zero based
+                  $('#catalog-nav').find($selector).nextAll().remove();
                   $('#catalog-nav').find($selector).remove();
+                  //console.log(elIndex);
                   event.preventDefault();
 
-                  //если первый то показыать корень
+                  $chainnedLink.parent('li').siblings().removeClass('hide');
+                  $chainnedLink.siblings().removeClass('open');
+
               }
 
           });
