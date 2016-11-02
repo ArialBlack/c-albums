@@ -65,13 +65,23 @@ $output = $output . l(t('Raise limits'), '/buy', array('attributes' => array('cl
 * Implements hook_block_info().
 */
 function generateRandomString($length = 24) {
-  $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_';
-  $charactersLength = strlen($characters);
-  $randomString = '';
-  for ($i = 0; $i < $length; $i++) {
-    $randomString .= $characters[rand(0, $charactersLength - 1)];
-  }
-  return $randomString;
+    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_';
+    $charactersLength = strlen($characters);
+    $randomString = '';
+    for ($i = 0; $i < $length; $i++) {
+        $randomString .= $characters[rand(0, $charactersLength - 1)];
+    }
+    return $randomString;
+}
+
+function generateRandomClass($length = 24) {
+    $characters = 'abcdefghijklmnopqrstuvwxyz';
+    $charactersLength = strlen($characters);
+    $randomString = '';
+    for ($i = 0; $i < $length; $i++) {
+        $randomString .= $characters[rand(0, $charactersLength - 1)];
+    }
+    return $randomString;
 }
 
 function coins_entity_view($entity, $type, $view_mode, $langcode) {
@@ -223,13 +233,25 @@ function _coins_taxonomy_tree($terms, $parent = 0, &$node_count = 0) {
             }
 
             $cardtemplate = '<div class="card"><div class="card-image waves-effect waves-block waves-light"><a href="/taxonomy/term/' .$term->tid  . '">' . $img . '</a></div>';
-            $cardtemplate = $cardtemplate . '<div class="card-content"><span class="card-title activator grey-text text-darken-4">' . $term->name . '<i class="icon ion-android-more-vertical"></i></span>';
+            $cardtemplate = $cardtemplate . '<div class="card-content">' . $term->name;
+
+            if ($termload->description) {
+                $cardtemplate = $cardtemplate . '<span class="card-title activator grey-text text-darken-4"><i class="icon ion-android-more-vertical"></i></span>';
+            }
+
             $cardtemplate = $cardtemplate . '<p>' . ($term->node_count + $childs_node_count) .'</p></div>';
-            $cardtemplate = $cardtemplate . '<div class="card-reveal"><span class="card-title grey-text text-darken-4">' . $term->name . '<i class="icon ion-android-close"></i></span>';
-            $cardtemplate = $cardtemplate . '<p>Here is some more information about this product that is only revealed once clicked on.</p></div></div>';
+
+            if ($termload->description) {
+                $cardtemplate = $cardtemplate . '<div class="card-reveal"><span class="card-title grey-text text-darken-4">' . $term->name . '<i class="icon ion-android-close"></i></span>';
+                $cardtemplate = $cardtemplate . $termload->description . '</div>';
+            }
+
+            $cardtemplate = $cardtemplate . '</div>';
+
 
             $items[] = array(
-                'data' =>  $cardtemplate, //'<a href="/taxonomy/term/' . $term->tid  . '">' . $img . $term->name . ($term->node_count + $childs_node_count) .'</a>',
+                'data' =>  '<a href="/taxonomy/term/' . $term->tid  . '" class="' . generateRandomClass() . '">'  . $term->name .'</a>',
+                ///'data' =>  $cardtemplate,
                 'children' => $children,
             );
         }

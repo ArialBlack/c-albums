@@ -1,0 +1,17 @@
+#catalog-tree {
+  > .item-list > ul > li .item-list {
+    display: none;
+
+    &.open {
+      display: block;
+    }
+  }
+}
+
+#catalog-nav {
+  border: black 1px solid;
+}
+
+.hide {
+  display: none;
+}
