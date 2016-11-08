@@ -1,4 +1,10 @@
-#catalog-tree {
+&.hide-empty {
+  #catalog-tree .card.is-empty {
+    display: none;
+  }
+}
+
+#catalog-tree  {
   ul, li {
     //reset
     margin: 0;

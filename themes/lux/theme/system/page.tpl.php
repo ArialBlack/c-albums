@@ -73,15 +73,20 @@
  *
  * @ingroup themeable
  */
+$cart_block = module_invoke('coins', 'block_view', 'MiniCart');
 ?>
 
 <header>
   <nav class="top-nav">
-    <div class="container">
+    <div class="full-container">
       <div class="nav-wrapper">
-        <a href="<?php print $front_page; ?>" title="<?php print t('Home'); ?>" rel="home" id="logo" class="brand-logo">
-          <img src="<?php print $logo; ?>" alt="<?php print t('Home'); ?>" />
-        </a>
+          <?php
+              print render($primary_nav);
+
+
+          print render($cart_block['content']);
+          ?>
+
       </div>
     </div>
   </nav>
@@ -107,7 +112,6 @@
 <main>
     <div class="full-container">
     <div class="row">
-
       <div class="col s12">
         <?php if ($breadcrumb): ?>
           <div id="breadcrumb"><?php print $breadcrumb; ?></div>
@@ -134,6 +138,29 @@
 </main>
 
 <footer class="page-footer">
+    <div id="send-form" class="animated print-hidden">
+        <a class="btn-close" href="#closeform"><i class="icon ion-close-circled"></i></a>
+        <div class="form-container">
+
+                <a class="show-form" href="#showform">Report / Feedback</a>
+            <?php
+            $feedback_block = module_invoke('webform', 'block_view', 'client-block-967');
+
+            ?>
+            <div class="form-content">
+                <div class="form">
+
+
+                    <?php
+                    print render($feedback_block['content']);
+
+                    ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php print render($page['footer']); ?>
   <div class="footer-copyright">
     <div class="container">© 2016 jj, All rights reserved.</div>
   </div>

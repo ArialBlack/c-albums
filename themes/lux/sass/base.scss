@@ -32,7 +32,7 @@ form select {
 }
 /* Prefix/Suffix CSS overrides */
 form input {
-  width: auto !important;
+ // width: auto !important;
 }
 .field-prefix + input[type="text"],
 .field-suffix + input[type="text"] {
@@ -214,3 +214,95 @@ tr.odd {
     display: block !important;
   }
 }
+
+#send-form {
+  display: block;
+  width: 200px;
+  position: fixed;
+  z-index: index($elements, feedback);
+  right: 50px;
+  background: blue;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  transform: translateY(-30px);
+  -webkit-transition: all 1s ease;
+  -moz-transition: all 1s ease;
+  -o-transition: all 1s ease;
+  -ms-transition: all 1s ease;
+  transition: all 1s ease;
+  height: 410px;
+  bottom: -410px;
+
+  .show-form {
+    padding-top: 3px;
+    height: 30px;
+    text-align: center;
+    color: white;
+    text-decoration: none;
+    font-size: 18px;
+    display: block;
+    width: 100%;
+  }
+
+  .btn-close {
+    display: none;
+    left: -35px;
+    font-size: 26px;
+    position: absolute;
+    color: red;
+  }
+
+  .form-content {
+    width: 100%;
+    padding: 10px 10px 0 10px;
+    box-sizing: border-box;
+    height: 100%;
+
+    .form {
+      background: white;
+      padding: 10px;
+      -webkit-border-radius: 3px;
+      -moz-border-radius: 3px;
+      border-radius: 3px;
+      opacity: 0;
+    }
+
+    #send-form textarea {
+       resize: none;
+    }
+  }
+
+  &.open {
+    bottom: 0;
+    transform: translateY(0);
+    width: 400px;
+    -webkit-box-shadow: 0px 0px 13px 0px rgba(0, 0, 0, 0.9);
+    -moz-box-shadow: 0px 0px 13px 0px rgba(0, 0, 0, 0.9);
+    box-shadow: 0px 0px 13px 0px rgba(0, 0, 0, 0.9);
+
+    &.filled {
+      bottom: -300px;
+    }
+
+    .btn-close {
+      display: block;
+    }
+
+    .form-content .form {
+      opacity: 1;
+    }
+  }
+
+}
+
+.cart-nav-link {
+  display: inline-block;
+  float: right;
+
+  i {
+    display: inline-block;
+  }
+}
+
+

@@ -1,9 +1,15 @@
 (function($){
   $(function(){
 
+      function sendForm() {
+          $('#send-form .show-form').on('click', function() {$('#send-form').addClass("open");});
+          $('#send-form .btn-close').on('click', function() {$('#send-form').removeClass("open");});
+      }
 
 
       $(document).ready(function() {
+          sendForm();
+
           $('.button-collapse').sideNav({
               menuWidth: 300, // Default is 240
               edge: 'left', // Choose the horizontal origin
@@ -70,6 +76,16 @@
           $myselect.material_select();
       });
 
+      $('.empty-switch input').change(function () {
+          console.log($(this).prop('checked'));
+          var check = $(this).prop('checked'),
+              $catalog = $('#catalog');
+          if (check) {
+              $catalog.removeClass('hide-empty');
+          } else {
+              $catalog.addClass('hide-empty');
+          }
+      });
 
 
       $('#edit-field-sell-item input:checkbox').change(function () {
