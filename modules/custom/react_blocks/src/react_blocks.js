@@ -8,22 +8,42 @@
 
   Drupal.behaviors.react_blocks = {
     attach: function (context) {
-
+      var initCid = null,
+          newCid = null,
+          toastSubject = null,
+          newData = [];
 
       // A div with some text in it
       var CommentBox = React.createClass({
 
       loadCommentsFromServer: function() {
+
         $.ajax({
           url: this.props.url,
           dataType: 'json',
           success: function(data) {
             this.setState({data: data});
+
+            $.each(data, function(i) {
+              newData[i] = data[i];
+              newCid = newData[i]['cid'];
+              toastSubject = newData[i]['subject'];
+            });
+
           }.bind(this),
           error: function(xhr, status, err) {
             console.error(this.props.url, status, err.toString());
           }.bind(this)
         });
+
+        if (newCid != initCid) {
+          if (initCid != null) {
+            Materialize.toast(toastSubject, 4000);
+          }
+          initCid = newCid;
+          console.log('new comment');
+        }
+
       },
 
       getInitialState: function() {
@@ -32,13 +52,15 @@
 
       componentDidMount: function() {
         this.loadCommentsFromServer();
+        //$initString = this.props.subject;
+        //console.log(this.state.data);
         setInterval(this.loadCommentsFromServer, this.props.pollInterval);
+        //console.log(this.state.data);
       },
 
       render: function() {
           return (
             <div className="commentBox">
-              <h3><b>Check them out!</b></h3>
               <CommentList data={this.state.data} />
             </div>
           );
@@ -66,19 +88,16 @@
         render: function() {
           return (
             <div className="comment">
-              <h2 className="commentAuthor">
-                {this.props.name}
-              </h2>
               {this.props.subject}
             </div>
           );
         }
       });
 
-      //
+
       // Render our reactComponent
       ReactDOM.render(
-        <CommentBox url="/api/v1/comment.json" pollInterval={2000} />,
+        <CommentBox url="/api/comments/last.json" pollInterval={2000} />,
         document.getElementById('recent-comments')
       );
 

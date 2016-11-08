@@ -8,6 +8,10 @@
 
 /**
  * Implements hook_block_info().
+ * npm install -g react-tools
+
+ * jsx --watch src/ build/
+ *
  */
 function react_blocks_block_info() {
   // react recent nodes block
