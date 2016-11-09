@@ -1,14 +1,50 @@
 (function($){
   $(function(){
 
+      var initCid = null,
+          newCid = null,
+          toastSubject = null,
+          newData = [];
+
+      function loadCommentFromServer () {
+          $.ajax({
+              url: '/api/comments/last.json',
+              dataType: 'json',
+              success: function(data) {
+
+                  $.each(data, function(i) {
+                      newData[i] = data[i];
+                      newCid = newData[i]['cid'];
+                      toastSubject = '<i class="icon ion-ios-chatbubble"></i> <b class="bq">“</b>' + newData[i]['subject'] + '...';
+                      console.log('t: ', newCid, initCid, toastSubject);
+
+                      if (newCid != initCid) {
+                          if (initCid != null) {
+                              Materialize.toast(toastSubject, 3000);
+                          }
+                          initCid = newCid;
+                          console.log('new comment');
+                      }
+                  });
+
+              }.bind(this),
+              error: function(xhr, status, err) {
+                  console.error(status, err.toString());
+              }.bind(this)
+          });
+      }
+
       function sendForm() {
           $('#send-form .show-form').on('click', function() {$('#send-form').addClass("open");});
           $('#send-form .btn-close').on('click', function() {$('#send-form').removeClass("open");});
       }
 
-
       $(document).ready(function() {
           sendForm();
+
+          var toastLastComment = setInterval(function() {
+              loadCommentFromServer();
+          }, 6000);
 
           $('.button-collapse').sideNav({
               menuWidth: 300, // Default is 240
