@@ -45,9 +45,7 @@ function react_blocks_block_view($delta) {
 }
 
 function _react_blocks_react_recent_comments_content() {
-
-  $output = "<div id='recent-comments'></div>";
-
+  $output = "<div id='recent-comments'></div><a href='/last-comments'>" . t("View all comments") . "</a>";
   return $output;
 
 }

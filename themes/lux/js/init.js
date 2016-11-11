@@ -16,14 +16,14 @@
                       newData[i] = data[i];
                       newCid = newData[i]['cid'];
                       toastSubject = '<i class="icon ion-ios-chatbubble"></i> <b class="bq">“</b>' + newData[i]['subject'] + '...';
-                      console.log('t: ', newCid, initCid, toastSubject);
+                      //console.log('t: ', newCid, initCid, toastSubject);
 
                       if (newCid != initCid) {
                           if (initCid != null) {
                               Materialize.toast(toastSubject, 3000);
                           }
                           initCid = newCid;
-                          console.log('new comment');
+                          //console.log('new comment');
                       }
                   });
 
@@ -39,12 +39,21 @@
           $('#send-form .btn-close').on('click', function() {$('#send-form').removeClass("open");});
       }
 
+      function preloader() {
+          if ($('.preloader-overlay').length > 0 ) {
+              $('body').css({
+                  'overflow-y': 'hidden'
+              });
+          }
+      }
+
       $(document).ready(function() {
+          preloader();
           sendForm();
 
-          var toastLastComment = setInterval(function() {
-              loadCommentFromServer();
-          }, 6000);
+         // var toastLastComment = setInterval(function() {
+          //    loadCommentFromServer();
+         // }, 6000);
 
           $('.button-collapse').sideNav({
               menuWidth: 300, // Default is 240
@@ -70,8 +79,10 @@
                   event.preventDefault();
 
                   $insertlink = $link.clone();
+                  $insertlink.addClass('chip').append('<i class="icon ion-ios-close-empty"></i>');
                   $insertlink.find('img').remove();
                   $insertlink = $insertlink.prop('outerHTML');
+
 
                   $card.addClass('hide');
                   $card.parent('li').siblings().addClass('hide');
@@ -148,6 +159,12 @@
           $('.view-mycoinslist .view-filters .form-item-title input').val($val);
       });*/
 
+      $(window).load(function () {
+          $('.preloader-overlay').remove();
+          $('body').css({
+              'overflow-y': 'auto'
+          });
+      });
 
   }); // end of document ready
 })(jQuery); // end of jQuery name space

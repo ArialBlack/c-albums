@@ -128,6 +128,13 @@ $author = $node->uid;
     print render($content['album_list_entity_view_1']);
   ?>
 
+
+  <?php
+  print render($content);
+  ?>
+
+
+
   <?php if (!empty($content['field_tags']) || !empty($content['links'])): ?>
   <footer>
     <?php print render($content['field_tags']); ?>

@@ -261,6 +261,11 @@ function _ulimits_block() {
   global $user;
   $current_user = $user->uid;
 
+    function hook_uc_addresses_address_load($address, $obj) {
+        // Example: set a value for my custom added field (through hook_uc_addresses_fields()).
+        $address->setField('myfield', 'myvalue');
+    }
+
   $query = db_select('node', 'n');
   $query->condition('n.type', 'coin');
   $query->condition('n.uid', $current_user);

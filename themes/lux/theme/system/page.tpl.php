@@ -74,7 +74,34 @@
  * @ingroup themeable
  */
 $cart_block = module_invoke('coins', 'block_view', 'MiniCart');
+
+$show_preloader = false;
+switch (request_path()) {
+    case 'catalog':
+        $show_preloader = true;
+        break;
+}
+
 ?>
+
+<?php if ($show_preloader): ?>
+    <div class="preloader-overlay">
+        <div class="preloader-container">
+            <div class="preloader-wrapper big active">
+                <div class="spinner-layer spinner-blue-only">
+                    <div class="circle-clipper left">
+                        <div class="circle"></div>
+                    </div><div class="gap-patch">
+                        <div class="circle"></div>
+                    </div><div class="circle-clipper right">
+                        <div class="circle"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<?php endif; ?>
 
 <header>
   <nav class="top-nav">
@@ -112,6 +139,7 @@ $cart_block = module_invoke('coins', 'block_view', 'MiniCart');
 <main>
     <div class="full-container">
     <div class="row">
+
       <div class="col s12">
         <?php if ($breadcrumb): ?>
           <div id="breadcrumb"><?php print $breadcrumb; ?></div>
