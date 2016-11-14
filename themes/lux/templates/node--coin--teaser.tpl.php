@@ -211,8 +211,8 @@ if ($current_user == $author_id) {
       <?php endif; ?>
 
       <?php if ($coin_actions_variant == 3 || $coin_actions_variant == 31 || $coin_actions_variant == 32 || $coin_actions_variant == 33): ?>
-          <?php if ($node->uc_auction['bid_count']): ?><div><i class="icon ion-arrow-graph-up-right"></i><p><?php print t('Bids: ') . $node->uc_auction['bid_count'] . ' / ' . $bid_string?></p></div><?php endif; ?>
-          <?php if ($node->uc_auction['expiry']): ?><div><i class="icon ion-clock"></i><p><?php print $expiry_string; ?></p></div><?php endif; ?>
+          <?php if (isset($node->uc_auction) && $node->uc_auction['bid_count']): ?><div><i class="icon ion-arrow-graph-up-right"></i><p><?php print t('Bids: ') . $node->uc_auction['bid_count'] . ' / ' . $bid_string?></p></div><?php endif; ?>
+          <?php if (isset($node->uc_auction) && $node->uc_auction['expiry']): ?><div><i class="icon ion-clock"></i><p><?php print $expiry_string; ?></p></div><?php endif; ?>
           <p><a href="/node/<?php print $node->nid ?>"><?php print t('View full info'); ?></a></p>
 
           <?php if ($coin_actions_variant == 31): ?>
@@ -224,7 +224,7 @@ if ($current_user == $author_id) {
 
 
 
-      <?php dsm($node); ?>
+
 
 
     </div>

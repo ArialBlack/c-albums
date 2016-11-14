@@ -1,6 +1,6 @@
 
 <?php
-$GLOBALS['started_user_coins_limit'] = 10;
+$GLOBALS['started_user_coins_limit'] = 100;
 $GLOBALS['started_user_albums_limit'] = 2;
 
 function coins_menu() {
@@ -167,6 +167,7 @@ function _mini_cart_block() {
         $display_items = entity_view('uc_cart_item', uc_cart_get_contents(), 'cart');
         foreach (element_children($display_items['uc_cart_item']) as $key) {
             $display_item = $display_items['uc_cart_item'][$key];
+           // dsm($display_item);
             $picture = uc_product_get_picture($display_item['nid']['#value'], 'uc_cart');
             $file = file_load($picture['#item']['fid']);
 
@@ -401,8 +402,6 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
 
   // EDIT OR NEW
   if ($form['#id'] == 'coin-node-form') {
-    dsm($form);
-
     $form['base']['prices']['list_price'] = FALSE;
     $form['base']['prices']['cost'] = FALSE;
     $form['base']['shippable'] = FALSE;
@@ -410,6 +409,8 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
     $form['base']['dimensions'] = FALSE;
     $form['base']['pkg_qty'] = FALSE;
     $form['base']['ordering'] = FALSE;
+
+    $form['base']['prices']['sell_price']['#description'] = t('Customer purchase price or "Buy it now" price');
 
       /*
     $form['base']['ordering'] = FALSE;
@@ -432,12 +433,31 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
 
   //EDIT
   if ($form['#id'] == 'coin-node-form' && $form['nid']['#value'] != NULL) {
+        $node = node_load($form['nid']['#value']);
+        if (isset($node->uc_auction['expiry'])) {
+            $expiry = $node->uc_auction['expiry'];
+            $now = time();
+            $hours_passed = abs(round(($expiry - $now)/3600));
+            //disallow user to edit finished auction item
+            // need to waint 24h
+            if (($expiry - $now) < 0 && $hours_passed < 24 && !in_array('Admin', $user->roles)) {
+                drupal_set_message(t("Auction finished, you can't edit coin for 24hours"), 'warning');
+                drupal_goto($_SERVER['HTTP_REFERER']);
+            }
 
-    //$form['#submit'][] = 'coins_form_alter_submit_handler_update';
+            if ($expiry > $now && !in_array('Admin', $user->roles)) {
+                //disallow user to edit active auction item
+                drupal_set_message(t("You can't edit active auction. Please write to support, if you need to change something"), 'warning');
+                drupal_goto($_SERVER['HTTP_REFERER']);
+            }
+        }
   }
 
   //NEW
   if ($form['#id'] == 'coin-node-form' && $form['nid']['#value'] == NULL) {
+
+    $form['base']['prices']['sell_price']['#required'] = FALSE;
+    //$form['base']['prices']['sell_price']['#attributes']['readonly'] = 'readonly';
 
     $query = db_select('node', 'n');
     $query->condition('n.type', 'coin');
@@ -487,7 +507,7 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
   if ($form['#id'] == 'views-exposed-form-mycoinslist-entityreference-view-widget-1' || $form['#id'] == 'views-exposed-form-my-coins-page') {
 
     //$quartiers[] = array('ALL' => t('- Any -'));
-    unset ($form['my_album_title']);
+    //unset ($form['my_album_title']);
 
     global $user;
     $current_user = $user->uid;
@@ -506,11 +526,22 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
     }
 
     $form['my_album_title'] = array(
-      '#type' => 'select',
-      '#default_value' => '1',
-      '#options' => $dropdown_array,
+        //'#description'=> t('Filter by your albums'),
+        '#type' => 'select',
+        '#default_value' => '1',
+        '#options' => $dropdown_array,
+
     );
+
+    //$form['my_album_title']['#description'] = t('Filter by your albums');
   }
+
+  if ($form['#id'] == 'views-exposed-form-my-coins-page') {
+      dsm($form);
+     // $form['shs_term_node_tid_depth']['#description'] = t('Filter by type');
+  }
+
+
 
   if ($form['#id'] == 'uc-order-view-update-form') {
 
@@ -595,6 +626,44 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
         $form['submitted']['page_url']['#access'] = FALSE;
     }
 
+}
+
+function coins_node_validate($node, $form, &$form_state) {
+   /* if (isset($node->end) && isset($node->start)) {
+        if ($node->start > $node->end) {
+            form_set_error('time', t('An event may not end before it starts.'));
+        }
+    }*/
+    if ($node->type == 'coin') {
+        //dsm($node);
+        //dsm($form);
+        //dsm($form_state);
+        //form_set_error('time', t('An event may not end before it starts.'));
+
+        if ($node->field_sell_item['und']['0']['value'] == 1) {
+            //user want just to sell
+            if (intval($node->sell_price) <= 0) {
+                //price is empty or 0
+                $form['base']['prices']['sell_price']['#required'] = TRUE;
+                form_set_error('sell_price', t('Sell price required & must be positive'));
+            }
+
+            if ($node->is_auction == 1) {
+                dsm('is auc');
+                form_set_error('is_auction', t('You must disable auction if you want just to sell'));
+            }
+        }
+
+        if ($node->is_auction && $node->is_now) {
+            //auction & buy it now
+            if (intval($node->sell_price) == 0) {
+                //price empty
+                $form['base']['prices']['sell_price']['#required'] = TRUE;
+                form_set_error('sell_price', t('Sell price required for "Buy it now" option'));
+            }
+
+        }
+    }
 }
 
 /**
