@@ -537,7 +537,7 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
   }
 
   if ($form['#id'] == 'views-exposed-form-my-coins-page') {
-      dsm($form);
+      //dsm($form);
      // $form['shs_term_node_tid_depth']['#description'] = t('Filter by type');
   }
 
@@ -618,13 +618,22 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
  */
   }
 
-    if ($form['#id'] == 'webform-client-form-967') {
+  if ($form['#id'] == 'webform-client-form-967') {
         $form['submitted']['page_title']['#default_value'] = drupal_get_title();
         $form['submitted']['page_url']['#default_value'] = request_path();
 
         $form['submitted']['page_title']['#access'] = FALSE;
         $form['submitted']['page_url']['#access'] = FALSE;
-    }
+  }
+
+  //coin clone hook
+  if (!empty($form['#node']->clone_from_original_nid)) {
+      $form['base']['model']['#access'] = FALSE;
+      $form['base']['prices']['sell_price']['#default_value'] = '';
+      $form['base']['prices']['sell_price']['required'] = FALSE;
+      $form['field_sell_item']['und']['#default_value'] = 0;
+  }
+
 
 }
 
@@ -738,4 +747,11 @@ function cart_is_maxed_out_delete() {
         ->execute();
 
     return true;
+}
+
+function coins_clone_node_alter(&$node, $context) {
+   // dsm($context);
+    //dsm($form);
+
+    //$context->sell_item['und']['0']['value'] = 0;
 }

@@ -64,7 +64,7 @@
           $('ul.tabs').tabs();
 
           $myselect = $('select').not('select.shs-select');
-          console.log($myselect);
+          //console.log($myselect);
           $myselect.material_select();
 
           $('.tooltipped').tooltip({

@@ -191,6 +191,13 @@ function uc_auction_form_alter(&$form, $form_state, $form_id) {
         '#weight' => 10,
       ),
     );
+
+    //coin clone hook
+    if (!empty($form['#node']->clone_from_original_nid)) {
+        $form['base']['auction']['is_auction']['#default_value'] = FALSE;
+        $form['base']['auction']['start_price']['#disabled'] = FALSE;
+        $form['base']['auction']['start_price']['#default_value'] = '';
+    }
     // The user can only change the start_price when a product is not currently
     // being auctioned. The other times, we display it as a disabled textfield.
     // However, since disabled fields are not submitted by browsers, we need
