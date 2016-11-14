@@ -315,4 +315,30 @@ function lux_preprocess_node(&$vars) {
     $vars['theme_hook_suggestions'][] = 'node__' . $vars['node']->type . '__teaser';  // node--[type|nodeid]--teaser.tpl.php
     $vars['theme_hook_suggestions'][] = 'node__' . $vars['node']->nid . '__teaser';
   }
+
+  if($vars['view_mode'] == 'full') {
+        $vars['theme_hook_suggestions'][] = 'node__' . $vars['node']->type . '__full';  // node--[type|nodeid]--full.tpl.php
+        $vars['theme_hook_suggestions'][] = 'node__' . $vars['node']->nid . '__full';
+  }
+
+
+    if ($vars['node']->type == 'coin') {
+
+       /* $query = db_select('uc_addresses', 'a');
+        $query->innerJoin('uc_countries', 'c', 'a.country = c.country_id');
+        $query->fields('c', array('country_name'));
+        $query->fields('a', array('city'));
+        $query->condition('a.uid', $vars['node']->uid);
+        $query->condition('a.default_shipping ', 1);
+        $adresses = $query->execute()->fetchAll();
+
+        if(count($adresses) > 0) {
+            $userlocation = $adresses[0]->country_name . ', ' . $adresses[0]->city;
+            $vars['user_location'] = $userlocation;
+        }*/
+
+        $vars['user_location'] = 'Ukraine, Kiev';
+    }
 }
+
+

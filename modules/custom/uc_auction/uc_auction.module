@@ -277,8 +277,9 @@ function uc_auction_form_alter(&$form, $form_state, $form_id) {
   // a generic hook_form_alter(), we'll just include them here.
   elseif ($form_id === 'uc_cart_view_form' && variable_get('uc_auction_force_one', TRUE)) {
 
-    foreach ($form_state['build_info']['args'][0] as $key => $item) {
-      if ($item->is_auc) {
+      foreach (element_children($form['items']) as $key) {
+        $item = $form['items'][$key];
+        if (!empty($item->is_auc)) {
         // This is a sneaky tricky dirty hack. It's waeome that it works though.
         $form['items'][$key]['qty']['qty'] = $form['items'][$key]['qty'];
         $form['items'][$key]['qty']['qty']['#type'] = 'value';
@@ -495,10 +496,8 @@ function uc_auction_node_insert($node){
 }
 
 function uc_auction_node_update($node){
-  dsm($node);
   // Did we do the validation above?
   if (!empty($node->is_auction) || !empty($node->original->uc_auction)) {
-    dsm('2');
     $prev_expiry = db_query('SELECT expiry FROM {uc_auction} WHERE nid = :nid', array(':nid' => $node->nid))->fetchField();
     if ($prev_expiry) {
       // This is a previously-existing auction. Are we baleeting it?
@@ -1355,6 +1354,21 @@ function uc_auction_uc_order($op, &$arg1, $arg2) {
  * Implements hook_add_to_cart() (an Ubercart hook)().
  */
 function uc_auction_uc_add_to_cart($nid, $qty, $data) {
+    //dsm('hook', $nid);
+
+    $node = node_load($nid);
+    //dsm($node);
+    if (isset($node->uc_auction) && $node->uc_auction['buy_now'] == FALSE ) {
+        //let's update product sell price to max won bid
+        db_update('uc_products')
+            ->fields(array(
+                'sell_price' => $node->uc_auction['high_bid_amt'],
+            ))
+            ->condition('nid', $nid)
+            ->execute();
+    }
+
+
   if (variable_get('uc_auction_force_one', TRUE)) {
     $node = node_load($nid);
     if (isset($node->uc_auction)) {
@@ -1367,6 +1381,7 @@ function uc_auction_uc_add_to_cart($nid, $qty, $data) {
         );
       }
       foreach (uc_cart_get_contents() as $cart_item) {
+       //   dsm($cart_item);
         if ($cart_item->nid === $nid) {
           return array(
             array(
@@ -1383,24 +1398,25 @@ function uc_auction_uc_add_to_cart($nid, $qty, $data) {
 /**
  * Implements hook_uc_cart_item() (an Ubercart hook)().
  */
-function uc_auction_uc_cart_item($op, $item) {
-  if ($op === 'load') {
-    $query = db_select('uc_auction','ua');
-    $query->leftjoin('uc_auction_bids','uab','ua.high_bid = uab.bid');
-    $query->fields('ua',array('high_bid'));
-    $query->fields('uab',array('amount'));
-    $query->condition('ua.nid',$item->nid,'=');
-    if ($info = $query->execute()->fetchAssoc()) {
-      $item->sell_price = $item->price;
-      if ($info['amount'] !== NULL) {
-        $item->price = floatval($info['amount']);
-        $item->display_price = $item->price;
-      }
-      $item->is_auc = TRUE;
-    }
-    else {
-      $item->is_auc = FALSE;
-    }
+function uc_auction_uc_cart_item($items) {
+    foreach ($items as $i => $item) {
+        $query = db_select('uc_auction','ua')->fields('ua',array('expiry'));
+        $query->leftjoin('uc_auction_bids','uab','ua.high_bid = uab.bid');
+        $query->fields('ua',array('high_bid'));
+        $query->fields('uab',array('amount'));
+        $query->condition('ua.nid',$item->nid,'=');
+
+        if ($info = $query->execute()->fetchAssoc()) {
+            $items[$i]->sell_price = $item->price;
+            if ($info['amount'] !== NULL && $info['expiry'] < REQUEST_TIME) {
+                $items[$i]->price = floatval($info['amount']);
+                $items[$i]->display_price = $items->price;
+            }
+            $items[$i]->is_auc = TRUE;
+        }
+        else {
+            $items[$i]->is_auc = FALSE;
+        }
   }
 }
 

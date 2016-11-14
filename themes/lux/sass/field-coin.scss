@@ -1,0 +1,52 @@
+.node-type-album,
+.node-coin.node-teaser {
+  .field-name-field-coin {
+    perspective: 1000px;
+    width: 200px;
+    height: 200px;
+
+    img {
+      border-radius: 100%;
+    }
+
+    /* flip speed goes here */
+    .field-items {
+      transition: 0.6s;
+      transform-style: preserve-3d;
+
+      position: relative;
+    }
+
+    /* hide back of pane during swap */
+    .field-item.even,
+    .field-item.odd {
+      backface-visibility: hidden;
+
+      position: absolute;
+      top: 0;
+      left: 0;
+
+      width: 200px;
+      height: 200px;
+    }
+
+    /* front pane, placed above back */
+    .field-item.even {
+      z-index: 2;
+      /* for firefox 31 */
+      transform: rotateY(0deg);
+    }
+
+    /* back, initially hidden pane */
+    .field-item.odd {
+      transform: rotateY(180deg);
+    }
+
+    &:hover,
+    &.hover {
+      .field-items {
+        transform: rotateY(180deg);
+      }
+    }
+  }
+}

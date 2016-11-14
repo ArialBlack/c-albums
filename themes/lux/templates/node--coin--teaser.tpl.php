@@ -77,40 +77,182 @@
  * @see template_process()
  *
  * @ingroup templates
+ * <header>
+<?php print render($title_prefix); ?>
+<?php if (!$page && !empty($title)): ?>
+<h2<?php print $title_attributes; ?>><a href="<?php print $node_url; ?>"><?php print $title; ?></a></h2>
+<?php endif; ?>
+<?php print render($title_suffix); ?>
+
+</header>
+ *
+ * <footer>
+<?php print render($content['field_tags']); ?>
+<?php print render($content['links']); ?>
+</footer>
+ *
+ *
+ * <?php print render($content['comments']); ?>
+ *
  */
+
+global $user;
+$current_user = $user->uid;
+$author_id = $node->uid;
+$author = user_load($author_id);
+$author_name = $author->name;
+
+$coin_actions_variant = 3;
+$expiry_string = '';
+$bid_string = '';
+
+if (isset($node->uc_auction)) {
+
+  $expiry_string = render($content['uc_auction']['expiry']['#title']) . ': ' . render($content['uc_auction']['expiry']['#markup']);
+  $bid_string = render($content['uc_auction']['high_bid']['#title']) . ': ' . render($content['uc_auction']['high_bid']['#markup']);
+  //auction
+  $expiry = $node->uc_auction['expiry'];
+  $now = time();
+  if ($expiry > $now) {
+    //active auction
+    $coin_actions_variant = 11;
+
+    if ($node->uc_auction['buy_now']) {
+      //can buy now
+      $coin_actions_variant = 12;
+    }
+
+    if ($node->uc_auction['high_bid_uid'] == $current_user ) {
+      //active and you are high
+      $coin_actions_variant = 33;
+    }
+
+  } else {
+    //finished auction
+    $coin_actions_variant = 31;
+
+    if ($node->uc_auction['high_bid_uid'] == $current_user ) {
+      //you won
+      $coin_actions_variant = 1;
+    }
+  }
+} else if ($node->field_sell_item ) {
+  //sel item
+  $coin_actions_variant = 2;
+
+} else {
+  //just show coin
+  $coin_actions_variant = 3;
+}
+
+if ($current_user == $author_id) {
+  //owner
+  $coin_actions_variant = 32;
+}
+
+
+
+
 
 
 ?>
-<article id="node-<?php print $node->nid; ?>" class="<?php print $classes; ?> clearfix"<?php print $attributes; ?>>
+
+  <?php
+  // Hide comments, tags, and links now so that we can render them later.
+  hide($content['comments']);
+  hide($content['links']);
+  hide($content['field_tags']);
+  //hide($content);
+  ?>
+
+<div class="card <?php print $classes; ?>" id="node-<?php print $node->nid; ?>" <?php print $attributes; ?>>
+
+    <?php print render($content['field_coin']) ?>
+
+    <div class="card-content">
+      <span class="card-title activator grey-text text-darken-4"><?php print $title; ?><i class="icon ion-android-more-vertical"></i></span>
+
+      <?php if ($node->field_condition): ?><div><i class="icon ion-ios-pulse-strong"></i><?php print render($content['field_condition']); ?></div><?php endif; ?>
+      <?php if ($node->field_metal): ?><div><i class="icon ion-erlenmeyer-flask"></i><?php print render($content['field_metal']); ?></div><?php endif; ?>
+      <?php if ($node->field_issuer): ?><div><i class="icon ion-wand"></i><?php print render($content['field_issuer']); ?></div><?php endif; ?>
+      <?php if ($node->field_denomination): ?><div><i class="icon ion-ios-pie-outline"></i><?php print render($content['field_denomination']); ?></div><?php endif; ?>
+      <?php if ($node->field_date_on_coin): ?><div><i class="icon ion-ios-calendar-outline"></i><?php print render($content['field_date_on_coin']); ?></div><?php endif; ?>
+
+      <div><i class="icon ion-location"></i><?php print $user_location; ?></div>
+
+      <div><i class="icon ion-chatbubbles"></i><p>commnents</p></div>
+
+      <?php
+      //print render($content['add_to_cart']);
+      ?>
+
+      <?php if ($coin_actions_variant == 1): ?>
+          <!-- curent user won -->
+          <div><i class="icon ion-trophy"></i><p>You won auction</p></div>
+          <?php print render($content['add_to_cart']); ?>
+      <?php endif; ?>
+
+      <?php if ($coin_actions_variant == 11): ?>
+          <!-- active auction -->
+          <?php if ($node->uc_auction['bid_count']): ?><div><i class="icon ion-arrow-graph-up-right"></i><p><?php print t('Bids: ') . $node->uc_auction['bid_count'] . ' / ' . $bid_string ?></p></div><?php endif; ?>
+          <?php if ($node->uc_auction['expiry']): ?><div><i class="icon ion-clock"></i><p><?php print $expiry_string; ?></p></div><?php endif; ?>
+          <a href="/node/<?php print $node->nid ?>" class="node-add-to-cart btn btn light-blue waves-effect waves-light btn-default form-submit"><?php print t('Place bid'); ?></a>
+      <?php endif; ?>
+
+      <?php if ($coin_actions_variant == 12): ?>
+          <!-- can buy now -->
+          <a href="/node/<?php print $node->nid ?>" class="node-add-to-cart btn btn light-blue waves-effect waves-light btn-default form-submit"><?php print t('Buy now / place bid'); ?></a>
+      <?php endif; ?>
+
+      <?php if ($coin_actions_variant == 2): ?>
+          <!-- just sell -->
+          <?php print render($content['add_to_cart']); ?>
+          <div><?php print '$'. round($node->sell_price, 0) ?></div>
+      <?php endif; ?>
+
+      <?php if ($coin_actions_variant == 3 || $coin_actions_variant == 31 || $coin_actions_variant == 32 || $coin_actions_variant == 33): ?>
+          <?php if (isset($node->uc_auction) && $node->uc_auction['bid_count']): ?><div><i class="icon ion-arrow-graph-up-right"></i><p><?php print t('Bids: ') . $node->uc_auction['bid_count'] . ' / ' . $bid_string?></p></div><?php endif; ?>
+          <?php if (isset($node->uc_auction) && $node->uc_auction['expiry']): ?><div><i class="icon ion-clock"></i><p><?php print $expiry_string; ?></p></div><?php endif; ?>
+          <p><a href="/node/<?php print $node->nid ?>"><?php print t('View full info'); ?></a></p>
+
+          <?php if ($coin_actions_variant == 31): ?>
+            <div><?php print '$'. round($node->uc_auction['start_price']) ?></div>
+          <?php endif; ?>
+
+      <?php endif; ?>
+
+
+
+
+
+
+
+    </div>
+    <div class="card-reveal">
+      <span class="card-title grey-text text-darken-4">Card Title<i class="icon ion-android-close"></i></span>
+      <div><a href="/user/<?php print $author_id ?>"><i class="icon ion-person"></i><?php print $author->name ?></a></div>
+      <p>Here is some more information about this product that is only revealed once clicked on.</p>
+      <?php
+      print render($content);
+      ?>
+    </div>
+</div>
+
+
+
+
   <?php if ((!$page && !empty($title)) || !empty($title_prefix) || !empty($title_suffix) || $display_submitted): ?>
-  <header>
-    <?php print render($title_prefix); ?>
-    <?php if (!$page && !empty($title)): ?>
-    <h2<?php print $title_attributes; ?>><a href="<?php print $node_url; ?>"><?php print $title; ?></a></h2>
-    <?php endif; ?>
-    <?php print render($title_suffix); ?>
 
-  </header>
+
   <?php endif; ?>
-  <?php
-    // Hide comments, tags, and links now so that we can render them later.
-    hide($content['comments']);
-    hide($content['links']);
-    hide($content['field_tags']);
-  hide($content);
-  ?>
 
-  <?php
-    print render($content['field_coin']);
 
-  ?>
+
+
 
 
   <?php if (!empty($content['field_tags']) || !empty($content['links'])): ?>
-  <footer>
-    <?php print render($content['field_tags']); ?>
-    <?php print render($content['links']); ?>
-  </footer>
+
   <?php endif; ?>
-  <?php print render($content['comments']); ?>
-</article>
+
+
