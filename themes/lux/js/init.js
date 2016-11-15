@@ -47,7 +47,12 @@
           }
       }
 
+      function _init() {
+        //$('.facetapi-facet-field-sell-item a').wrapInner( "<label></label>" );
+      }
+
       $(document).ready(function() {
+          _init();
           preloader();
           sendForm();
 

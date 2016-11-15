@@ -240,9 +240,6 @@ function _ua_block() {
     $output = $output . '<li><a href="/user/my-orders"><i class="icon ion-bag"></i>' . t('My orders') . '</a></li>';
     $output = $output . '<li><a href="/user/' . $user->uid .'/auctions"><i class="icon ion-clock"></i>' . t('My last bids') . '</a></li>';
     $output = $output . '<li><a href="/user/' . $current_user . '/wishlist"><i class="icon ion-heart"></i>' . t('My wishlist') . '</a></li>';
-    $output = $output . '<li class="separator"></li>';
-    $output = $output . '<li><a href="/user"></i>' . t('My profile') . '</a></li>';
-    $output = $output . '<li><a href="/user/logout">' . t('Logout') . '</a></li>';
     $output = $output . '</ul></nav>';
     return $output;
 }
@@ -620,7 +617,7 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
 
   if ($form['#id'] == 'webform-client-form-967') {
         $form['submitted']['page_title']['#default_value'] = drupal_get_title();
-        $form['submitted']['page_url']['#default_value'] = request_path();
+        $form['submitted']['page_url']['#default_value'] = current_path();
 
         $form['submitted']['page_title']['#access'] = FALSE;
         $form['submitted']['page_url']['#access'] = FALSE;

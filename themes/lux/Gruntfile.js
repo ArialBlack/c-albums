@@ -51,7 +51,8 @@ module.exports = function(grunt) {
          sass: {                              // Task
             dist: {                            // Target
                 options: {                       // Target options
-                    style: 'expanded'
+                    style: 'expanded',
+                    lineNumbers: true
                 },
                 files: {                         // Dictionary of files
                     'css/style.css': 'sass/style.scss',       // 'destination': 'source

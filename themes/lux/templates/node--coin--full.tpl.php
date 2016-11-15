@@ -114,12 +114,16 @@ $author = $node->uid;
 
   //dsm($node->field_sell_item);
 
-  if (count($node->field_sell_item) > 0 && $current_user != $author && count($node->field_coins_taxonomy) > 0)  {
+  if (isset($node->field_sell_item) && $current_user != $author && isset($node->field_coins_taxonomy))  {
       if ($node->field_sell_item['und']['0']['value'] == 1) {
-        print render($content['sell_price']);
+        dsm('show cart');
         print render($content['add_to_cart']);
       }
   }
+  if (isset($node->field_sell_item)) {
+    print render($content['sell_price']);
+  }
+
   ?>
 
   <?php
@@ -130,7 +134,7 @@ $author = $node->uid;
 
 
   <?php
-  print render($content);
+  //print render($content);
   ?>
 
 
