@@ -51,10 +51,30 @@
         //$('.facetapi-facet-field-sell-item a').wrapInner( "<label></label>" );
       }
 
+      //todo move to backend
+      function setLinkedSwitches() {
+          var $switches = $('.switch[data-linked-facet-chekbox]');
+          $switches.each(function() {
+              var $switch = $( this ),
+                  $switchInput =  $switch.find('input'),
+                  $class = $switch.data('linked-facet-chekbox'),
+                  $input = $('.' + $class + ' input.facetapi-checkbox'),
+                  $parent = $input.parent('li'),
+                  $link = $parent.find('a.facetapi-checkbox');
+                  $parent.parent('ul').hide();
+              if ($link.hasClass('facetapi-active')) {
+                  $switchInput.prop('checked', true);
+              } else {
+                  $switchInput.prop('checked', false);
+              }
+          });
+      }
+
       $(document).ready(function() {
           _init();
           preloader();
           sendForm();
+          setLinkedSwitches(); //todo move to backend
 
          // var toastLastComment = setInterval(function() {
           //    loadCommentFromServer();
@@ -140,6 +160,18 @@
               $catalog.addClass('hide-empty');
           }
       });
+
+      //todo move to backend
+      $('.switch[data-linked-facet-chekbox] input').change(function () {
+          console.log($(this).prop('checked'));
+          var $class = $(this).parents('.switch[data-linked-facet-chekbox]').data('linked-facet-chekbox'),
+              $input = $('.' + $class + ' input.facetapi-checkbox'),
+              $parent = $input.parent('li'),
+              $url = $parent.find('a.facetapi-checkbox').attr('href');
+
+          location.href = $url;
+      });
+
 
 
       //$('#edit-field-sell-item input:checkbox').change(function () {

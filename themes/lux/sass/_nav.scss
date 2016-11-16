@@ -2,6 +2,18 @@
   z-index: index($elements, dropdown);
 
   .facet-search-menu {
+
+    .standalone-filter {
+      padding: 0 1rem;
+      color: black; //todo
+      border-bottom: 1px solid #ddd;
+
+      i, label {
+        color: black; //todo
+        font-weight: 400;
+      }
+    }
+
     .collapsible-body {
       padding: 0;
 

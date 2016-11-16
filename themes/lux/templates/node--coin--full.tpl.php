@@ -134,7 +134,7 @@ $author = $node->uid;
 
 
   <?php
-  //print render($content);
+  print render($content);
   ?>
 
 

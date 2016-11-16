@@ -181,28 +181,56 @@ switch (request_path()) {
                   <h6 class="side-menu-block-title"><?php print t('Filters:');?></h6>
                   <ul class="collapsible facet-search-menu" data-collapsible="expandable">
                       <?php
+                        $facet_auction = module_invoke('facetapi', 'block_view', 'oiOPrkLHwV7TpC9WuGr70PauqZnsGJMJ');
+                        $facet_sell = module_invoke('facetapi', 'block_view', 'WunX70X0h1hXzbBmTtoAnjnBjP0iICEe');
                         $facet_condition = module_invoke('facetapi', 'block_view', 'PVhLjDeLKfq5MBczJNYyGFmTFPGhxJjw');
                         $facet_date_on_coin = module_invoke('facetapi', 'block_view', '2jP2OGo3ozMxLgQQnTBur5CreEGNl7O7');
                         $facet_denomination = module_invoke('facetapi', 'block_view', 'otQY26r071KzVPfIYeaR67wCA1pYsTgc');
                         $facet_metal = module_invoke('facetapi', 'block_view', 'gc62eYWeLzjbCDHEShV0LKV1jAKMbY0x');
-                        $facet_sell = module_invoke('facetapi', 'block_view', 'WunX70X0h1hXzbBmTtoAnjnBjP0iICEe');
                         $facet_price = module_invoke('facetapi', 'block_view', 'hsA18paT13IX1xFKuLrBNXEsnjjZnxgI');
                         $facet_type = module_invoke('facetapi', 'block_view', 'J2BnfgejIrkARaL30Z3gaWn95cOFxyz1');
 
-
+                        $auction_filter = strpos($cp, 'is-auction') > 0 ? true : false;
+                        $sell_filter = strpos($cp, 'is-sell') > 0 ? true : false;
+                        $condition_filter = strpos($cp, 'condition') > 0 ? true : false;
                         $date_filter = strpos($cp, 'date-on-coin') > 0 ? true : false;
                         $denomination_filter = strpos($cp, 'denomination') > 0 ? true : false;
                         $metal_filter = strpos($cp, 'metal') > 0 ? true : false;
-                        $sell_filter = strpos($cp, 'is-sell') > 0 ? true : false;
                         $price_filter = strpos($cp, 'price') > 0 ? true : false;
                         $type_filter = strpos($cp, 'type') > 0 ? true : false;
 
                         //open first filter if filter by first filter or all filters not opened
-                        $is_all_filters_empty = $date_filter + $denomination_filter + $metal_filter + $sell_filter + $price_filter + $type_filter;
-                        if (strpos($cp, 'condition') > 0 || !$is_all_filters_empty) {
-                            $condition_filter = true;
-                        } else $condition_filter = false;
+                        //$is_all_filters_empty = $date_filter + $denomination_filter + $metal_filter + $sell_filter + $price_filter + $type_filter;
+                        //if (strpos($cp, 'condition') > 0 || !$is_all_filters_empty) {
+                        //    $condition_filter = true;
+                        //} else $condition_filter = false;
                      ?>
+                      <?php if ($facet_sell['content']): ?>
+                          <li>
+                              <div class="standalone-filter switch sell-items" data-linked-facet-chekbox="facetapi-facet-field-sell-item">
+                                  <label>
+                                      <i class="icon ion-bag"></i>
+                                      <input type="checkbox">
+                                      <span class="lever"></span>
+                                      <?php print t('Show only sell items'); ?>
+                                  </label>
+                              </div>
+                              <?php print render($facet_sell['content']); ?>
+                          </li>
+                      <?php endif; ?>
+                      <?php if ($facet_auction['content']): ?>
+                          <li>
+                              <div class="standalone-filter switch " data-linked-facet-chekbox="facetapi-facet-field-is-auction">
+                                  <label>
+                                      <i class="icon ion-arrow-graph-up-right"></i>
+                                      <input type="checkbox">
+                                      <span class="lever"></span>
+                                      <?php print t('Show only auction items'); ?>
+                                  </label>
+                              </div>
+                              <?php print render($facet_auction['content']); ?>
+                          </li>
+                      <?php endif; ?>
                       <?php if ($facet_condition['content']): ?>
                       <li>
                           <div class="collapsible-header <?php if($condition_filter) {print ('active');} ?>"><i class="icon ion-ios-pulse-strong"></i> <?php print t('Filter by condition'); ?></div>
@@ -225,12 +253,6 @@ switch (request_path()) {
                       <li>
                           <div class="collapsible-header <?php if($metal_filter) {print ('active');} ?>"><i class="icon ion-erlenmeyer-flask"></i> <?php print t('Filter by metal'); ?></div>
                           <div class="collapsible-body"><?php print render($facet_metal['content']); ?></div>
-                      </li>
-                      <?php endif; ?>
-                      <?php if ($facet_sell['content']): ?>
-                      <li>
-                          <div class="collapsible-header <?php if($sell_filter) {print ('active');} ?>"><i class="icon ion-bag"></i> <?php print t('Filter sell items'); ?></div>
-                          <div class="collapsible-body"><?php print render($facet_sell['content']); ?></div>
                       </li>
                       <?php endif; ?>
                       <?php if ($facet_price['content']): ?>

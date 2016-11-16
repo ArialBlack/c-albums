@@ -409,6 +409,8 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
 
     $form['base']['prices']['sell_price']['#description'] = t('Customer purchase price or "Buy it now" price');
 
+    $form['field_is_auction']['#access'] = FALSE;
+
       /*
     $form['base']['ordering'] = FALSE;
     $form['base']['weight']['weight_units']['#disabled'] = TRUE;
@@ -752,3 +754,4 @@ function coins_clone_node_alter(&$node, $context) {
 
     //$context->sell_item['und']['0']['value'] = 0;
 }
+

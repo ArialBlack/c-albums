@@ -484,6 +484,7 @@ function uc_auction_node_validate($node,$form,&$form_state){
     $sell = FALSE;
   }
 }
+
 function uc_auction_node_insert($node){
   if(isset($node->is_auction) && $node->is_auction){
     // This is an auction. Write the info to uc_auctions.
@@ -499,6 +500,18 @@ function uc_auction_node_insert($node){
     // Invoke hook_auc_create(&$node, &$record, $new)
     module_invoke_all('auc_create', $node, $record, TRUE);
     drupal_write_record('uc_auction', $record);
+
+    $id = db_insert('field_data_field_is_auction')
+        ->fields(array(
+            'entity_type' => 'node',
+            'bundle' => 'coin',
+            'entity_id' => $node->nid,
+            'revision_id' => $node->nid,
+            'language' => 'und',
+            'delta' => 0,
+            'field_is_auction_value' => 1,
+            ))
+        ->execute();
   }
 }
 
@@ -529,16 +542,25 @@ function uc_auction_node_update($node){
 
         db_update('uc_auction')->fields($record)->condition('nid',$node->nid)->execute();
 
+        db_update('field_data_field_is_auction')
+            ->fields(array('field_is_auction_value' => 1))
+            ->condition('entity_id', $node->nid)
+            ->execute();
+
       }
       elseif (!$node->is_auction && isset($node->original->uc_auction)) {
         db_delete('uc_auction')->condition('nid', $node->nid)->execute();
         db_delete('uc_auction_bids')->condition('nid', $node->nid)->execute();
         // Invoke hook_auc_remove($node, $deletion).
         module_invoke_all('auc_remove', $node, FALSE);
+
+        db_update('field_data_field_is_auction')
+            ->fields(array('field_is_auction_value' => 1))
+            ->condition('entity_id', $node->nid)
+            ->execute();
       }
     }
     else {
-      dsm('3');
       // This is a previously-existing product which is becoming an auction.
       $record = array(
         'nid' => $node->nid,
@@ -552,6 +574,11 @@ function uc_auction_node_update($node){
       // Invoke hook_auc_create(&$node, &$record, $new)
       module_invoke_all('auc_create', $node, $record, FALSE);
       drupal_write_record('uc_auction', $record);
+
+      db_update('field_data_field_is_auction')
+          ->fields(array('field_is_auction_value' => 1))
+          ->condition('entity_id', $node->nid)
+          ->execute();
     }
   }
 }
