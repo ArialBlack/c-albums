@@ -1,0 +1,5 @@
+name = Coins import
+description = code for importing coins from mongo
+version = 7.x-1.0
+core = 7.x
+package = Coins albums

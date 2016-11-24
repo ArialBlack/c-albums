@@ -133,22 +133,23 @@ switch (request_path()) {
               <?php
                 $cp = current_path();
                 $path = substr($cp, 0, 6);
+                global $user;
+                $current_user = $user->uid;
               ?>
-              <?php if ($path != 'search'): ?>
-                  <ul class="collapsible user-menu" data-collapsible="expandable">
-                      <li>
+              <?php if ($path != 'search' && $current_user > 0): ?>
+                  <ul class="collapsible user-menu" data-collapsible="accordion">
+                      <li class="profile-menu">
                           <?php
                             $userlimits_block = module_invoke('coins', 'block_view', 'UserLimits');
                             $msg_block = module_invoke('privatemsg', 'block_view', 'privatemsg-new');
                           ?>
-                          <div class="collapsible-header active"><i class="icon ion-person"></i> <?php print t('Profile'); ?></div>
+                          <div class="collapsible-header"><?php print(_get_user_avatar()); ?><i class="icon ion-person"></i> <?php print t('Profile'); ?></div>
                           <div class="collapsible-body">
                               <?php
                                 print render($userlimits_block['content']);
                                 print render($msg_block['content']);
                               ?>
                           </div>
-                          <div class="collapsible-body"></div>
                       </li>
                       <li>
                           <?php $useractions_block = module_invoke('coins', 'block_view', 'UserActions'); ?>
@@ -157,7 +158,7 @@ switch (request_path()) {
                       </li>
                   </ul>
               <?php endif; ?>
-              <?php if ($path == 'search'): ?>
+              <?php if ($path == 'search' && $current_user > 0): ?>
                   <ul class="collapsible user-menu" data-collapsible="accordion">
                       <li>
                           <?php
@@ -177,7 +178,8 @@ switch (request_path()) {
                           <div class="collapsible-body"><?php print render($useractions_block['content']); ?></div>
                       </li>
                   </ul>
-
+              <?php endif; ?>
+              <?php if ($path == 'search'): ?>
                   <h6 class="side-menu-block-title"><?php print t('Filters:');?></h6>
                   <ul class="collapsible facet-search-menu" data-collapsible="expandable">
                       <?php
@@ -272,8 +274,7 @@ switch (request_path()) {
               <?php endif; ?>
           <?php print render($page['sidebar_first']); ?>
               <ul>
-                  <li><a href="/user"></i><?php print t('My profile'); ?></a></li>
-                  <li><a href="/user/logout"><?php print t('Logout'); ?></a></li>
+                  <li><a href="/user/logout"><i class="icon ion-log-out"></i> <?php print t('Logout'); ?></a></li>
               </ul>
         </div></div> <!-- /.section, /#sidebar-first -->
 
@@ -281,22 +282,35 @@ switch (request_path()) {
 </header>
 
 <main>
+    <?php if ($breadcrumb): ?>
+        <div id="breadcrumb">
+            <div class="full-container">
+                <div class="row">
+                    <div class="col s12">
+                        <?php print $breadcrumb; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <div class="full-container">
     <div class="row">
 
       <div class="col s12">
-        <?php if ($breadcrumb): ?>
-          <div id="breadcrumb"><?php print $breadcrumb; ?></div>
-        <?php endif; ?>
 
         <?php print $messages; ?>
 
         <div id="content" class="column"><div class="section">
             <?php if ($page['highlighted']): ?><div id="highlighted"><?php print render($page['highlighted']); ?></div><?php endif; ?>
             <a id="main-content"></a>
-            <?php print render($title_prefix); ?>
-            <?php if ($title): ?><h1 class="title" id="page-title"><?php print $title; ?></h1><?php endif; ?>
-            <?php print render($title_suffix); ?>
+                <?php
+                    $tid = arg(2);
+                    $term = taxonomy_term_load($tid);
+                ?>
+
+            <?php if ($title && !$term): ?><h1 class="title" id="page-title"><?php print $title; ?></h1><?php endif; ?>
+
             <?php if ($tabs): ?><div class="tabs"><?php print render($tabs); ?></div><?php endif; ?>
             <?php print render($page['help']); ?>
             <?php if ($action_links): ?><ul class="action-links"><?php print render($action_links); ?></ul><?php endif; ?>

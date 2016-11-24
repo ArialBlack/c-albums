@@ -337,7 +337,31 @@ function lux_preprocess_node(&$vars) {
             $vars['user_location'] = $userlocation;
         }*/
 
-        $vars['user_location'] = 'Ukraine, Kiev';
+        $vars['user_location'] = 'Ukraine, Kiev'; //todo
+    }
+}
+
+function lux_breadcrumb($variables) {
+
+    if (!empty($variables['breadcrumb'])) {
+        $crumbs = "";
+        $variables['breadcrumb'][] = '<span class="active">' . drupal_get_title() . '</span>';
+        $breadcrumb = $variables['breadcrumb'];
+
+        // Provide a navigational heading to give context for breadcrumb links to
+        // screen-reader users. Make the heading invisible with .element-invisible.
+        $output = '<nav><div class="nav-wrapper"><h2 class="element-invisible">' . t('You are here') . '</h2>';
+
+        $output .= theme('item_list', array(
+                'items' => $breadcrumb,
+                'type' => 'ul',
+                'attributes' => array('id' => 'main-breadcrumbs', 'class' => array('breadcrumbs')),
+            )
+        );
+
+        $output .= '</div></nav>';
+
+        return $output;
     }
 }
 

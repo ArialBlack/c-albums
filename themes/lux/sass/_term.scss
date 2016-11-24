@@ -1,0 +1,28 @@
+#breadcrumb {
+  .col {
+    padding: 0;
+  }
+
+  nav {
+    background: white;
+
+    a {
+      color: gray;
+    }
+  }
+
+  .breadcrumbs li:before {
+    color: rgba(0, 0, 0, 0.3);
+  }
+}
+
+.term-header {
+  min-height: 250px;
+  background-size: cover;
+  background-position: center center;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  z-index: -1;
+  left: 0;
+}

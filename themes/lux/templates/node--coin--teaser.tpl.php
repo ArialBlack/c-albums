@@ -165,61 +165,62 @@ if ($current_user == $author_id) {
   //hide($content);
   ?>
 
-<div class="card <?php print $classes; ?>" id="node-<?php print $node->nid; ?>" <?php print $attributes; ?>>
+<div class="card-container">
+    <div class="card <?php print $classes; ?>" id="node-<?php print $node->nid; ?>" <?php print $attributes; ?>>
 
-    <?php print render($content['field_coin']) ?>
+        <?php print render($content['field_coin']) ?>
 
-    <div class="card-content">
-      <span class="card-title activator grey-text text-darken-4"><?php print $title; ?><i class="icon ion-android-more-vertical"></i></span>
+        <div class="card-content">
+          <span class="card-title activator grey-text text-darken-4"><?php print $title; ?><i class="icon ion-android-more-vertical"></i></span>
 
-      <?php if ($node->field_condition): ?><div><i class="icon ion-ios-pulse-strong"></i><?php print render($content['field_condition']); ?></div><?php endif; ?>
-      <?php if ($node->field_metal): ?><div><i class="icon ion-erlenmeyer-flask"></i><?php print render($content['field_metal']); ?></div><?php endif; ?>
-      <?php if ($node->field_issuer): ?><div><i class="icon ion-wand"></i><?php print render($content['field_issuer']); ?></div><?php endif; ?>
-      <?php if ($node->field_denomination): ?><div><i class="icon ion-ios-pie-outline"></i><?php print render($content['field_denomination']); ?></div><?php endif; ?>
-      <?php if ($node->field_date_on_coin): ?><div><i class="icon ion-ios-calendar-outline"></i><?php print render($content['field_date_on_coin']); ?></div><?php endif; ?>
+          <?php if ($node->field_condition): ?><div><i class="icon ion-ios-pulse-strong"></i><?php print render($content['field_condition']); ?></div><?php endif; ?>
+          <?php if ($node->field_metal): ?><div><i class="icon ion-erlenmeyer-flask"></i><?php print render($content['field_metal']); ?></div><?php endif; ?>
+          <?php if ($node->field_issuer): ?><div><i class="icon ion-wand"></i><?php print render($content['field_issuer']); ?></div><?php endif; ?>
+          <?php if ($node->field_denomination): ?><div><i class="icon ion-ios-pie-outline"></i><?php print render($content['field_denomination']); ?></div><?php endif; ?>
+          <?php if ($node->field_date_on_coin): ?><div><i class="icon ion-ios-calendar-outline"></i><?php print render($content['field_date_on_coin']); ?></div><?php endif; ?>
 
-      <div><i class="icon ion-location"></i><?php print $user_location; ?></div>
+          <div><i class="icon ion-location"></i><?php print $user_location; ?></div>
 
-      <div><i class="icon ion-chatbubbles"></i><p>commnents</p></div>
+          <div><i class="icon ion-chatbubbles"></i><p>commnents</p></div>
 
-      <?php
-      //print render($content['add_to_cart']);
-      ?>
+          <?php
+          //print render($content['add_to_cart']);
+          ?>
 
-      <?php if ($coin_actions_variant == 1): ?>
-          <!-- curent user won -->
-          <div><i class="icon ion-trophy"></i><p>You won auction</p></div>
-          <?php print render($content['add_to_cart']); ?>
-      <?php endif; ?>
-
-      <?php if ($coin_actions_variant == 11): ?>
-          <!-- active auction -->
-          <?php if ($node->uc_auction['bid_count']): ?><div><i class="icon ion-arrow-graph-up-right"></i><p><?php print t('Bids: ') . $node->uc_auction['bid_count'] . ' / ' . $bid_string ?></p></div><?php endif; ?>
-          <?php if ($node->uc_auction['expiry']): ?><div><i class="icon ion-clock"></i><p><?php print $expiry_string; ?></p></div><?php endif; ?>
-          <a href="/node/<?php print $node->nid ?>" class="node-add-to-cart btn btn light-blue waves-effect waves-light btn-default form-submit"><?php print t('Place bid'); ?></a>
-      <?php endif; ?>
-
-      <?php if ($coin_actions_variant == 12): ?>
-          <!-- can buy now -->
-          <a href="/node/<?php print $node->nid ?>" class="node-add-to-cart btn btn light-blue waves-effect waves-light btn-default form-submit"><?php print t('Buy now / place bid'); ?></a>
-      <?php endif; ?>
-
-      <?php if ($coin_actions_variant == 2): ?>
-          <!-- just sell -->
-          <?php print render($content['add_to_cart']); ?>
-          <div><?php print '$'. round($node->sell_price, 0) ?></div>
-      <?php endif; ?>
-
-      <?php if ($coin_actions_variant == 3 || $coin_actions_variant == 31 || $coin_actions_variant == 32 || $coin_actions_variant == 33): ?>
-          <?php if (isset($node->uc_auction) && $node->uc_auction['bid_count']): ?><div><i class="icon ion-arrow-graph-up-right"></i><p><?php print t('Bids: ') . $node->uc_auction['bid_count'] . ' / ' . $bid_string?></p></div><?php endif; ?>
-          <?php if (isset($node->uc_auction) && $node->uc_auction['expiry']): ?><div><i class="icon ion-clock"></i><p><?php print $expiry_string; ?></p></div><?php endif; ?>
-          <p><a href="/node/<?php print $node->nid ?>"><?php print t('View full info'); ?></a></p>
-
-          <?php if ($coin_actions_variant == 31): ?>
-            <div><?php print '$'. round($node->uc_auction['start_price']) ?></div>
+          <?php if ($coin_actions_variant == 1): ?>
+              <!-- curent user won -->
+              <div><i class="icon ion-trophy"></i><p>You won auction</p></div>
+              <?php print render($content['add_to_cart']); ?>
           <?php endif; ?>
 
-      <?php endif; ?>
+          <?php if ($coin_actions_variant == 11): ?>
+              <!-- active auction -->
+              <?php if ($node->uc_auction['bid_count']): ?><div><i class="icon ion-arrow-graph-up-right"></i><p><?php print t('Bids: ') . $node->uc_auction['bid_count'] . ' / ' . $bid_string ?></p></div><?php endif; ?>
+              <?php if ($node->uc_auction['expiry']): ?><div><i class="icon ion-clock"></i><p><?php print $expiry_string; ?></p></div><?php endif; ?>
+              <a href="/node/<?php print $node->nid ?>" class="node-add-to-cart btn btn light-blue waves-effect waves-light btn-default form-submit"><?php print t('Place bid'); ?></a>
+          <?php endif; ?>
+
+          <?php if ($coin_actions_variant == 12): ?>
+              <!-- can buy now -->
+              <a href="/node/<?php print $node->nid ?>" class="node-add-to-cart btn btn light-blue waves-effect waves-light btn-default form-submit"><?php print t('Buy now / place bid'); ?></a>
+          <?php endif; ?>
+
+          <?php if ($coin_actions_variant == 2): ?>
+              <!-- just sell -->
+              <?php print render($content['add_to_cart']); ?>
+              <div><?php print '$'. round($node->sell_price, 0) ?></div>
+          <?php endif; ?>
+
+          <?php if ($coin_actions_variant == 3 || $coin_actions_variant == 31 || $coin_actions_variant == 32 || $coin_actions_variant == 33): ?>
+              <?php if (isset($node->uc_auction) && $node->uc_auction['bid_count']): ?><div><i class="icon ion-arrow-graph-up-right"></i><p><?php print t('Bids: ') . $node->uc_auction['bid_count'] . ' / ' . $bid_string?></p></div><?php endif; ?>
+              <?php if (isset($node->uc_auction) && $node->uc_auction['expiry']): ?><div><i class="icon ion-clock"></i><p><?php print $expiry_string; ?></p></div><?php endif; ?>
+              <p><a href="/node/<?php print $node->nid ?>"><?php print t('View full info'); ?></a></p>
+
+              <?php if ($coin_actions_variant == 31): ?>
+                <div><?php print '$'. round($node->uc_auction['start_price']) ?></div>
+              <?php endif; ?>
+
+          <?php endif; ?>
 
 
 
@@ -227,16 +228,18 @@ if ($current_user == $author_id) {
 
 
 
-    </div>
-    <div class="card-reveal">
-      <span class="card-title grey-text text-darken-4">Card Title<i class="icon ion-android-close"></i></span>
-      <div><a href="/user/<?php print $author_id ?>"><i class="icon ion-person"></i><?php print $author->name ?></a></div>
-      <p>Here is some more information about this product that is only revealed once clicked on.</p>
-      <?php
-      print render($content);
-      ?>
+        </div>
+        <div class="card-reveal">
+          <span class="card-title grey-text text-darken-4">Card Title<i class="icon ion-android-close"></i></span>
+          <div><a href="/user/<?php print $author_id ?>"><i class="icon ion-person"></i><?php print $author->name ?></a></div>
+          <p>Here is some more information about this product that is only revealed once clicked on.</p>
+          <?php
+          //print render($content);
+          ?>
+        </div>
     </div>
 </div>
+
 
 
 

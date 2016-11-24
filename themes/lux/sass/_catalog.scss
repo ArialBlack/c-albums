@@ -1,5 +1,5 @@
 &.hide-empty {
-  #catalog-tree .card.is-empty {
+  #catalog-tree .card-container.is-empty {
     display: none;
   }
 }
@@ -23,12 +23,7 @@
     }
   }
 
-  .card {
-    max-width: 300px;
-    display: inline-block;
-    vertical-align: top;
-    margin: 8px;
-
+  .card-container {
     .card-hidden-title {
       display: none;
     }
@@ -46,3 +41,4 @@
 .hide {
   display: none;
 }
+

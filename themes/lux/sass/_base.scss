@@ -350,21 +350,3 @@ i.icon {
     text-rendering: optimizeLegibility;
 }
 
-.chip {
-  .icon {
-    cursor: pointer;
-    float: right;
-    font-size: 24px;
-    line-height: 32px;
-    padding-left: 8px;
-  }
-}
-
-.page-taxonomy-term {
-  .card {
-    width: 23%;
-    display: inline-block;
-    vertical-align: top;
-    margin: 8px;
-  }
-}

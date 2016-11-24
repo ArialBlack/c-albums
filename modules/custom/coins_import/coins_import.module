@@ -1,0 +1,131 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Andrey
+ * Date: 24.11.2016
+ * Time: 23:39
+ */
+function coins_import_menu() {
+    $items = array();
+
+    $items['admin/import-coins'] = array(
+        'title' => 'import coins',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('coins_import_form'),
+        'access callback' => TRUE,
+    );
+
+    return $items;
+}
+
+function coins_import_form() {
+    $form['description'] = array(
+        '#type' => 'markup',
+        '#markup' => '<p>We will import coins</p>',
+    );
+
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => 'Import',
+    );
+
+    return $form;
+}
+
+function coins_import_form_submit($form, &$form_state) {
+    // Подготавливаем данные для операций
+    $result = db_select('node', 'n')
+        ->fields('n', array('nid'))
+        ->range(0, 10)
+        ->execute();
+
+    // Создаём массив с операциями.
+    foreach ($result as $row) {
+        $operations[] = array('coins_import_operation', array($row->nid));
+    }
+
+    $batch = array(
+        // Массив операций и их параметров
+        'operations' => $operations,
+        // Функция, которая будет выполнена после окончания всех операций
+        'finished' => 'coins_import_batch_finished',
+        // Заголовок страницы с прогресс баром.
+        // Опционально, по умолчанию t('Processing')
+        'title' => 'Обновление дат',
+        // Сообщение, показываемое при инициализации.
+        // Опционально, по умолчанию t('Initializing.')
+        'init_message' => 'Подготовка данных',
+        // Сообщение, показывемое при выполнении операций.
+        // Опционально, по умолчанию t('Completed @current of @total.')
+        'progress_message' => 'Выполнено @current из @total.',
+        // Сообщение показываемое при ошибке выполнения операции.
+        // Опционально, по умолчанию t('An error has occurred.')
+        'error_message' => 'Произошла ошибка.',
+    );
+
+    batch_set($batch);
+
+    // Если Batch API используется не из _submit функции,
+    // то дополнительно нужно вызвать batch_process();
+}
+
+/**
+ * Batch process callback.
+ */
+function coins_import_operation($nid, &$context) {
+    // Производим манипуляции над нодами
+
+
+
+    $node = new stdClass();
+    $node->type = 'coin';
+    node_object_prepare($node);
+
+    $node->title =  "n: ". $nid;
+    $node->language = LANGUAGE_NONE;
+    $node->uid = 1;
+    $node->status = 1;
+    $node->revision = FALSE;
+    $node->comment = 0;
+    $node->promote = 0;
+    $node->sticky = 0;
+    $node->log = NULL;
+    $node->created = time();
+
+    /*$node->field_src_url[$node->language][0]['value'] = $json->url;
+
+    $img_count = count ( $json->imgsrc);
+
+    for ($i = 0; $i < $img_count; $i++) {
+        $url = $json->imgsrc[$i];
+        $file_info = system_retrieve_file($url, 'public://pictures/', TRUE);
+        if($file_info->fid){
+            $node->field_image[LANGUAGE_NONE][$i]['fid'] = $file_info->fid;
+        }
+    }*/
+
+    $node = node_submit($node);
+    node_save($node);
+
+
+
+
+
+
+    // Эта информация будет доступна в mymodule_batch_finished
+    $context['results']['titles'][] = $node->title;
+    // Сообщение выводимое под прогресс-баром после окончания текущей операции
+    $context['message'] = 'Обновлена дата у материала <em>' . check_plain($node->title) . '</em>';
+}
+
+/**
+ * Batch finish callback.
+ */
+function coins_import_batch_finished($success, $results, $operations) {
+    if ($success) {
+        drupal_set_message('Обновлена дата у ' . count($results['titles']) . ' материалов:' . theme('item_list', array('items' => $results['titles'])));
+    }
+    else {
+        drupal_set_message('Завершено с ошибками.', 'error');
+    }
+}

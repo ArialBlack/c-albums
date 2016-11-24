@@ -1,8 +1,50 @@
+.breadcrumbs {
+ li {
+   &:before {
+     content: '\f125';
+     color: rgba(255,255,255,0.7);
+     vertical-align: top;
+     display: inline-block;
+     font-family: "Ionicons";
+     font-weight: normal;
+     font-style: normal;
+     font-size: 25px;
+     margin: 0 10px 0 8px;
+     -webkit-font-smoothing: antialiased;
+   }
+
+   &.first {
+     &:before {
+       display: none;
+     }
+   }
+
+   a {
+     display: inline;
+   }
+ }
+}
+
+.chip {
+  .icon {
+    cursor: pointer;
+    float: right;
+    font-size: 24px;
+    line-height: 32px;
+    padding-left: 8px;
+  }
+}
+
 .side-nav {
   z-index: index($elements, dropdown);
 
-  .facet-search-menu {
+  li > a > i,
+  li > a {
+    color: black;
+    font-weight: 400;
+  }
 
+  .facet-search-menu {
     .standalone-filter {
       padding: 0 1rem;
       color: black; //todo
@@ -12,10 +54,14 @@
         color: black; //todo
         font-weight: 400;
       }
+
+      i {
+        vertical-align: middle;
+      }
     }
 
     .collapsible-body {
-      padding: 0;
+      //padding: 0;
 
       li {
         margin-left: 0;
@@ -79,26 +125,64 @@
       li.last {
         border-bottom: 1px solid #ddd;
       }
+
+      li > a {
+        padding-left: 0;
+        padding-right: 0;
+      }
     }
   }
-}
 
-#nav-mobile {
   .user-menu {
-    .collapsible-header {
-      display: none;
+    > li.active {
+      border-bottom: 1px solid #ddd;
+    }
+
+    .create-album {
+      .ion-plus-circled {
+        font-size: 14px;
+      }
+
+      .ion-ios-photos {
+        margin-left: -40px;
+        margin-right: 0;
+      }
     }
   }
-}
 
-.page-search {
-  #nav-mobile {
-    .user-menu {
-      .collapsible-header {
-        display: block;
+  .profile-menu {
+    .media-left {
+      h4 {
+        display: inline;
+      }
+
+      img {
+        border-radius: 100%;
+      }
+    }
+
+    .collapsible-header {
+      i {
+        display: none;
+      }
+
+      img {
+        height: 28px;
+        border-radius: 100%;
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 12px;
+      }
+
+      &.active {
+        i {
+          display: inline-block;
+        }
+
+        img {
+          display: none;
+        }
       }
     }
   }
 }
-
-
