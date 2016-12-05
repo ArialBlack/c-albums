@@ -5,6 +5,17 @@
  * Date: 24.11.2016
  * Time: 23:39
  */
+
+module_load_include('inc', 'coins_import', 'coins_import.grades');
+module_load_include('inc', 'coins_import', 'coins_import.gettype');
+
+/////////////////////////////
+
+function _convertGrage($raw_grage) {
+    //if($raw_grade == 'weef') {return 'c6'} else
+
+}
+
 function coins_import_menu() {
     $items = array();
 
@@ -29,19 +40,41 @@ function coins_import_form() {
         '#value' => 'Import',
     );
 
+    //dsm('t: ', _getcointype('Central Europe and Italy', null, null, 'Ferdinand I'));
+    //dsm('t: ', _getcointype('Roman Imperial', null, null, 'Augustus'));
     return $form;
 }
 
 function coins_import_form_submit($form, &$form_state) {
     // Подготавливаем данные для операций
-    $result = db_select('node', 'n')
-        ->fields('n', array('nid'))
-        ->range(0, 10)
-        ->execute();
+    $url = 'http://localhost:3000/coins';
+    $result = drupal_http_request($url);
+    $result_data = json_decode($result->data);
+
+    $uids = db_select('users_roles', 'u')
+        ->fields('u', array('uid'))
+        ->condition('u.rid', '7')
+        ->execute()->fetchAll();
+
+    $test_array = [];
+    $uids_array = [];
+
+    $batch_limit = 3;
+
+    for ($i =0; $i < $batch_limit; $i++) {
+        $random_uid_position = intval(rand(0 , count($uids)-1));
+        array_push($test_array, $result_data->message[$i]);
+        array_push($uids_array, $uids[$random_uid_position]->uid);
+    }
+
+    dsm($test_array);
 
     // Создаём массив с операциями.
-    foreach ($result as $row) {
-        $operations[] = array('coins_import_operation', array($row->nid));
+    $j = 0;
+    foreach ($test_array as $row) {
+        $u = $uids_array[$j];
+        $operations[] = array('coins_import_operation', array($row, $u));
+        $j++;
     }
 
     $batch = array(
@@ -51,7 +84,7 @@ function coins_import_form_submit($form, &$form_state) {
         'finished' => 'coins_import_batch_finished',
         // Заголовок страницы с прогресс баром.
         // Опционально, по умолчанию t('Processing')
-        'title' => 'Обновление дат',
+        'title' => 'Создание нод',
         // Сообщение, показываемое при инициализации.
         // Опционально, по умолчанию t('Initializing.')
         'init_message' => 'Подготовка данных',
@@ -64,7 +97,6 @@ function coins_import_form_submit($form, &$form_state) {
     );
 
     batch_set($batch);
-
     // Если Batch API используется не из _submit функции,
     // то дополнительно нужно вызвать batch_process();
 }
@@ -72,19 +104,34 @@ function coins_import_form_submit($form, &$form_state) {
 /**
  * Batch process callback.
  */
-function coins_import_operation($nid, &$context) {
+function coins_import_operation($row, $u, &$context) {
     // Производим манипуляции над нодами
-
-
 
     $node = new stdClass();
     $node->type = 'coin';
     node_object_prepare($node);
 
-    $node->title =  "n: ". $nid;
+    $combined_title = '';
+
+    if (isset($row->issuer)) {
+        $node->field_issuer['und'][0]['value'] = $row->issuer;
+        $combined_title = $combined_title . ' ' . $row->issuer;
+    }
+
+    if (isset($row->denomination)) {
+        $node->field_denomination['und'][0]['value'] = $row->denomination;
+        $combined_title = $combined_title . ' ' . $row->denomination;
+    }
+
+    if (isset($row->date_struck)) {
+        $node->field_date_struck['und'][0]['value'] = $row->date_struck;
+        $combined_title = $combined_title . ' ' . $row->date_struck;
+    }
+
+    $node->title = $combined_title;
     $node->language = LANGUAGE_NONE;
-    $node->uid = 1;
-    $node->status = 1;
+    $node->uid = $u;
+    $node->status = 0;
     $node->revision = FALSE;
     $node->comment = 0;
     $node->promote = 0;
@@ -92,30 +139,76 @@ function coins_import_operation($nid, &$context) {
     $node->log = NULL;
     $node->created = time();
 
-    /*$node->field_src_url[$node->language][0]['value'] = $json->url;
+    if (isset($row->grade)) {
+        $node->field_condition['und'][0]['value'] = coins_import__grades($row->grade);
+    } else {
+        $node->field_condition['und'][0]['value'] = 'c0';
+    }
 
-    $img_count = count ( $json->imgsrc);
+    if (isset($row->metal)) {
+        $node->field_metal['und'][0]['value'] = coins_import__metals($row->metal);
+    }
 
-    for ($i = 0; $i < $img_count; $i++) {
-        $url = $json->imgsrc[$i];
-        $file_info = system_retrieve_file($url, 'public://pictures/', TRUE);
-        if($file_info->fid){
-            $node->field_image[LANGUAGE_NONE][$i]['fid'] = $file_info->fid;
+    $node->model = generateRandomString();
+
+    $furl = str_replace(array( '[', ']', '"' ), '', $row->photo);
+    $furls = explode(",", $furl);
+
+    $img_count = count($furls);
+    dsm($furls,$img_count);
+
+    ////
+    if($img_count == 1) {
+
+        $directory = file_build_uri('coinsphotoimport');
+        if (!file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+            // If our directory doesn't exist and can't be created, use the default.
+            $directory = NULL;
         }
-    }*/
+
+        //we need to duplicate file for cropping and B-side
+        for ($f=0; $f <2; $f++) {
+            $file_info = system_retrieve_file($furls[0], $directory, TRUE);
+
+            if($file_info->fid){
+                $node->field_coin['und'][$f]['fid'] = $file_info->fid;
+            }
+        }
+
+    }
+
+    if($img_count > 1) {
+        for ($f = 0; $f < $img_count; $f++) {
+            $furl = str_replace(array( '[', ']', '"' ), '', $furls[$f]);
+            $directory = file_build_uri('coinsphotoimport');
+            if (!file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+                // If our directory doesn't exist and can't be created, use the default.
+                $directory = NULL;
+            }
+            $file_info = system_retrieve_file($furls[$f], $directory, TRUE);
+
+            if($file_info->fid){
+                $node->field_coin['und'][$f]['fid'] = $file_info->fid;
+            }
+        }
+    }
+    ////
+
+    $processed_id = $row->_id;
+    $url_delete = 'http://localhost:3000/coins/' . $processed_id;
+    $options = array(
+        'method' => 'DELETE',
+    );
+    ///////////////////$result_delete = drupal_http_request($url_delete, $options);
 
     $node = node_submit($node);
     node_save($node);
 
 
-
-
-
-
     // Эта информация будет доступна в mymodule_batch_finished
     $context['results']['titles'][] = $node->title;
     // Сообщение выводимое под прогресс-баром после окончания текущей операции
-    $context['message'] = 'Обновлена дата у материала <em>' . check_plain($node->title) . '</em>';
+    $context['message'] = 'Созданы ноды <em>' . check_plain($node->title) . '</em>';
 }
 
 /**
@@ -123,7 +216,7 @@ function coins_import_operation($nid, &$context) {
  */
 function coins_import_batch_finished($success, $results, $operations) {
     if ($success) {
-        drupal_set_message('Обновлена дата у ' . count($results['titles']) . ' материалов:' . theme('item_list', array('items' => $results['titles'])));
+        drupal_set_message('Создано нод ' . count($results['titles']) . ' материалов:' . theme('item_list', array('items' => $results['titles'])));
     }
     else {
         drupal_set_message('Завершено с ошибками.', 'error');
