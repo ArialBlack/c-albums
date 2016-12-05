@@ -1,0 +1,46 @@
+#catalog-tree .item-list > ul,
+.view-search-coins {
+  //overflow: hidden;
+}
+
+#catalog-tree .item-list > ul > li,
+.view-search-coins .views-row,
+.view-taxonomy-term .views-row {
+  width: 100%;
+  display: inline-block;
+  vertical-align: top;
+  float: left;
+
+  &.wide {
+    width: 100%;
+  }
+
+  .card-container {
+    padding: 8px;
+    height: 100%;
+
+    .card {
+      height: 100%;
+    }
+  }
+
+  @media #{$medium-and-up} {
+    width: 50%;
+  }
+
+  @media #{$large-and-up} {
+    width: 33%;
+  }
+
+  @media (min-width: 1350px) {
+    width: 25%;
+  }
+
+  @media #{$ex-large-and-up} {
+    width: 20%;
+  }
+
+  @media (min-width: 1920px) {
+    width: 16%;
+  }
+}

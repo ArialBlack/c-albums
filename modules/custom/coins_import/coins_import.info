@@ -1,0 +1,9 @@
+name = Coins import
+description = code for importing coins from mongo
+version = 7.x-1.0
+core = 7.x
+package = Coins albums
+
+files[] = coins_import.module
+files[] = coins_import.grades.inc
+

@@ -21,6 +21,11 @@ function uc_auction_now_form_alter(&$form, $form_state, $form_id) {
       '#default_value' => (isset($form['#node']->uc_auction) && $form['#node']->uc_auction['buy_now']) || (!isset($form['#node']->nid) && variable_get('uc_auction_now_new_default', FALSE)),
       '#weight' => 15,
     );
+
+     //coin clone hook
+    if (!empty($form['#node']->clone_from_original_nid)) {
+        $form['base']['auction']['is_now']['#default_value'] = FALSE;
+    }
   }
   elseif ($form_id === 'uc_product_field_settings_form') {
     // Add widget to field form

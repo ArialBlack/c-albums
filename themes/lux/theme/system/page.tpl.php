@@ -128,31 +128,189 @@ switch (request_path()) {
         <img src="<?php print $logo; ?>" alt="<?php print t('Home'); ?>" />
       </a>
     <?php endif; ?>
-    <?php if ($page['sidebar_first']): ?>
+
       <div id="sidebar-first" class="column sidebar"><div class="section">
+              <?php
+                $cp = current_path();
+                $path = substr($cp, 0, 6);
+                global $user;
+                $current_user = $user->uid;
+              ?>
+              <?php if ($path != 'search' && $current_user > 0): ?>
+                  <ul class="collapsible user-menu" data-collapsible="accordion">
+                      <li class="profile-menu">
+                          <?php
+                            $userlimits_block = module_invoke('coins', 'block_view', 'UserLimits');
+                            $msg_block = module_invoke('privatemsg', 'block_view', 'privatemsg-new');
+                          ?>
+                          <div class="collapsible-header"><?php print(_get_user_avatar()); ?><i class="icon ion-person"></i> <?php print t('Profile'); ?></div>
+                          <div class="collapsible-body">
+                              <?php
+                                print render($userlimits_block['content']);
+                                print render($msg_block['content']);
+                              ?>
+                          </div>
+                      </li>
+                      <li>
+                          <?php $useractions_block = module_invoke('coins', 'block_view', 'UserActions'); ?>
+                          <div class="collapsible-header active"><i class="icon ion-ios-bolt"></i> <?php print t('Actions'); ?></div>
+                          <div class="collapsible-body"><?php print render($useractions_block['content']); ?></div>
+                      </li>
+                  </ul>
+              <?php endif; ?>
+              <?php if ($path == 'search' && $current_user > 0): ?>
+                  <ul class="collapsible user-menu" data-collapsible="accordion">
+                      <li>
+                          <?php
+                            $userlimits_block = module_invoke('coins', 'block_view', 'UserLimits');
+                            $msg_block = module_invoke('privatemsg', 'block_view', 'privatemsg-new');
+                          ?>
+                          <div class="collapsible-header"><i class="icon ion-person"></i> <?php print t('Profile'); ?></div>
+                          <div class="collapsible-body">
+                              <?php
+                                print render($userlimits_block['content']);
+                                print render($msg_block['content']);
+                              ?>
+                      </li>
+                      <li>
+                          <?php $useractions_block = module_invoke('coins', 'block_view', 'UserActions'); ?>
+                          <div class="collapsible-header"><i class="icon ion-ios-bolt"></i> <?php print t('Actions'); ?></div>
+                          <div class="collapsible-body"><?php print render($useractions_block['content']); ?></div>
+                      </li>
+                  </ul>
+              <?php endif; ?>
+              <?php if ($path == 'search'): ?>
+                  <h6 class="side-menu-block-title"><?php print t('Filters:');?></h6>
+                  <ul class="collapsible facet-search-menu" data-collapsible="expandable">
+                      <?php
+                        $facet_auction = module_invoke('facetapi', 'block_view', 'oiOPrkLHwV7TpC9WuGr70PauqZnsGJMJ');
+                        $facet_sell = module_invoke('facetapi', 'block_view', 'WunX70X0h1hXzbBmTtoAnjnBjP0iICEe');
+                        $facet_condition = module_invoke('facetapi', 'block_view', 'PVhLjDeLKfq5MBczJNYyGFmTFPGhxJjw');
+                        $facet_date_on_coin = module_invoke('facetapi', 'block_view', '2jP2OGo3ozMxLgQQnTBur5CreEGNl7O7');
+                        $facet_denomination = module_invoke('facetapi', 'block_view', 'otQY26r071KzVPfIYeaR67wCA1pYsTgc');
+                        $facet_metal = module_invoke('facetapi', 'block_view', 'gc62eYWeLzjbCDHEShV0LKV1jAKMbY0x');
+                        $facet_price = module_invoke('facetapi', 'block_view', 'hsA18paT13IX1xFKuLrBNXEsnjjZnxgI');
+                        $facet_type = module_invoke('facetapi', 'block_view', 'J2BnfgejIrkARaL30Z3gaWn95cOFxyz1');
+
+                        $auction_filter = strpos($cp, 'is-auction') > 0 ? true : false;
+                        $sell_filter = strpos($cp, 'is-sell') > 0 ? true : false;
+                        $condition_filter = strpos($cp, 'condition') > 0 ? true : false;
+                        $date_filter = strpos($cp, 'date-on-coin') > 0 ? true : false;
+                        $denomination_filter = strpos($cp, 'denomination') > 0 ? true : false;
+                        $metal_filter = strpos($cp, 'metal') > 0 ? true : false;
+                        $price_filter = strpos($cp, 'price') > 0 ? true : false;
+                        $type_filter = strpos($cp, 'type') > 0 ? true : false;
+
+                        //open first filter if filter by first filter or all filters not opened
+                        //$is_all_filters_empty = $date_filter + $denomination_filter + $metal_filter + $sell_filter + $price_filter + $type_filter;
+                        //if (strpos($cp, 'condition') > 0 || !$is_all_filters_empty) {
+                        //    $condition_filter = true;
+                        //} else $condition_filter = false;
+                     ?>
+                      <?php if ($facet_sell['content']): ?>
+                          <li>
+                              <div class="standalone-filter switch sell-items" data-linked-facet-chekbox="facetapi-facet-field-sell-item">
+                                  <label>
+                                      <i class="icon ion-bag"></i>
+                                      <input type="checkbox">
+                                      <span class="lever"></span>
+                                      <?php print t('Show only sell items'); ?>
+                                  </label>
+                              </div>
+                              <?php print render($facet_sell['content']); ?>
+                          </li>
+                      <?php endif; ?>
+                      <?php if ($facet_auction['content']): ?>
+                          <li>
+                              <div class="standalone-filter switch " data-linked-facet-chekbox="facetapi-facet-field-is-auction">
+                                  <label>
+                                      <i class="icon ion-arrow-graph-up-right"></i>
+                                      <input type="checkbox">
+                                      <span class="lever"></span>
+                                      <?php print t('Show only auction items'); ?>
+                                  </label>
+                              </div>
+                              <?php print render($facet_auction['content']); ?>
+                          </li>
+                      <?php endif; ?>
+                      <?php if ($facet_condition['content']): ?>
+                      <li>
+                          <div class="collapsible-header <?php if($condition_filter) {print ('active');} ?>"><i class="icon ion-ios-pulse-strong"></i> <?php print t('Filter by condition'); ?></div>
+                          <div class="collapsible-body"><?php print render($facet_condition['content']); ?></div>
+                      </li>
+                      <?php endif; ?>
+                      <?php if ($facet_date_on_coin['content']): ?>
+                      <li>
+                          <div class="collapsible-header <?php if($date_filter) {print ('active');} ?>"><i class="icon ion-ios-calendar-outline"></i> <?php print t('Filter by date'); ?></div>
+                          <div class="collapsible-body"><?php print render($facet_date_on_coin['content']); ?></div>
+                      </li>
+                      <?php endif; ?>
+                      <?php if ($facet_denomination['content']): ?>
+                          <li>
+                              <div class="collapsible-header <?php if($denomination_filter) {print ('active');} ?>"><i class="icon ion-ios-pie-outline"></i> <?php print t('Filter by denomination'); ?></div>
+                              <div class="collapsible-body"><?php print render($facet_denomination['content']); ?></div>
+                          </li>
+                      <?php endif; ?>
+                      <?php if ($facet_metal['content']): ?>
+                      <li>
+                          <div class="collapsible-header <?php if($metal_filter) {print ('active');} ?>"><i class="icon ion-erlenmeyer-flask"></i> <?php print t('Filter by metal'); ?></div>
+                          <div class="collapsible-body"><?php print render($facet_metal['content']); ?></div>
+                      </li>
+                      <?php endif; ?>
+                      <?php if ($facet_price['content']): ?>
+                      <li>
+                          <div class="collapsible-header <?php if($price_filter) {print ('active');} ?>"><i class="icon ion-social-usd"></i> <?php print t('Filter by price'); ?></div>
+                          <div class="collapsible-body"><?php print render($facet_price['content']); ?></div>
+                      </li>
+                      <?php endif; ?>
+                      <?php if ($facet_type['content']): ?>
+                      <li>
+                          <div class="collapsible-header <?php if($type_filter) {print ('active');} ?>"><i class="icon ion-ios-folder-outline"></i> <?php print t('Filter by type'); ?></div>
+                          <div class="collapsible-body"><?php print render($facet_type['content']); ?></div>
+                      </li>
+                      <?php endif; ?>
+                  </ul>
+
+              <?php endif; ?>
           <?php print render($page['sidebar_first']); ?>
+              <ul>
+                  <li><a href="/user/logout"><i class="icon ion-log-out"></i> <?php print t('Logout'); ?></a></li>
+              </ul>
         </div></div> <!-- /.section, /#sidebar-first -->
-    <?php endif; ?>
+
   </div>
 </header>
 
 <main>
+    <?php if ($breadcrumb): ?>
+        <div id="breadcrumb">
+            <div class="full-container">
+                <div class="row">
+                    <div class="col s12">
+                        <?php print $breadcrumb; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <div class="full-container">
     <div class="row">
 
       <div class="col s12">
-        <?php if ($breadcrumb): ?>
-          <div id="breadcrumb"><?php print $breadcrumb; ?></div>
-        <?php endif; ?>
 
         <?php print $messages; ?>
 
         <div id="content" class="column"><div class="section">
             <?php if ($page['highlighted']): ?><div id="highlighted"><?php print render($page['highlighted']); ?></div><?php endif; ?>
             <a id="main-content"></a>
-            <?php print render($title_prefix); ?>
-            <?php if ($title): ?><h1 class="title" id="page-title"><?php print $title; ?></h1><?php endif; ?>
-            <?php print render($title_suffix); ?>
+                <?php
+                    $tid = arg(2);
+                    $term = taxonomy_term_load($tid);
+                ?>
+
+            <?php if ($title && !$term): ?><h1 class="title" id="page-title"><?php print $title; ?></h1><?php endif; ?>
+
             <?php if ($tabs): ?><div class="tabs"><?php print render($tabs); ?></div><?php endif; ?>
             <?php print render($page['help']); ?>
             <?php if ($action_links): ?><ul class="action-links"><?php print render($action_links); ?></ul><?php endif; ?>

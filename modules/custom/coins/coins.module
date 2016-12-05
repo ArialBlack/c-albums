@@ -9,7 +9,7 @@ function coins_menu() {
     $items['user/my-limits'] = array(
     'title' => 'My limits',
     'page callback' => '_my_limits',
-        'access callback' => TRUE, //'user_is_logged_in'
+        'access callback' => TRUE //'user_is_logged_in'
     );
 
     return $items;
@@ -217,7 +217,6 @@ function _write_pm_block() {
         }
 
         $output = '<a href="/messages/new/1">Write pm to user</a>';
-        dsm($viewed_user);
         return $output;
     } else {
         return '';
@@ -228,8 +227,12 @@ function _ua_block() {
     global $user;
     $current_user = $user->uid;
 
-    $output = '<nav></nav><ul><li><a href="/node/add/coin"><i class="icon ion-plus-circled"></i>' . t('Add coin') . '</a></li>';
-    $output = $output . '<li><a href="/node/add/album"><i class="icon ion-ios-photos"></i><i class="icon ion-plus-circled"></i>' . t('Create album') . '</a></li>';
+    if ($current_user < 1) {
+        return false;
+    }
+
+    $output = '<ul><li><a href="/node/add/coin"><i class="icon ion-plus-circled"></i>' . t('Add coin') . '</a></li>';
+    $output = $output . '<li class="create-album"><a href="/node/add/album"><i class="icon ion-plus-circled"></i><i class="icon ion-ios-photos"></i>' . t('Create album') . '</a></li>';
     $output = $output . '<li class="separator"></li>';
     $output = $output . '<li><a href="/user/my-coins"><i class="icon ion-social-euro"></i>' . t('My coins') . '</a></li>';
     $output = $output . '<li><a href="/user/' . $current_user . '/undefined-coins"><i class="icon ion-ios-help"></i>' . t('My undefined coins') . '</a></li>';
@@ -240,10 +243,7 @@ function _ua_block() {
     $output = $output . '<li><a href="/user/my-orders"><i class="icon ion-bag"></i>' . t('My orders') . '</a></li>';
     $output = $output . '<li><a href="/user/' . $user->uid .'/auctions"><i class="icon ion-clock"></i>' . t('My last bids') . '</a></li>';
     $output = $output . '<li><a href="/user/' . $current_user . '/wishlist"><i class="icon ion-heart"></i>' . t('My wishlist') . '</a></li>';
-    $output = $output . '<li class="separator"></li>';
-    $output = $output . '<li><a href="/user"></i>' . t('My profile') . '</a></li>';
-    $output = $output . '<li><a href="/user/logout">' . t('Logout') . '</a></li>';
-    $output = $output . '</ul></nav>';
+    $output = $output . '</ul>';
     return $output;
 }
 
@@ -257,15 +257,34 @@ function _ua_block() {
 
   return $output;
 }*/
+function _get_user_avatar() {
+    global $user;
+    $current_user = $user->uid;
+
+    $file = file_load($user->picture);
+
+    if($file) {
+        $uri = $file->uri;
+        $img = image_style_url("profile_picture", $uri);
+    } else {
+        $img = "/sites/default/files/profile.png";
+    }
+
+    return '<img class="media-object" src="' . $img . '" alt="avatar">';
+}
 
 function _ulimits_block() {
   global $user;
   $current_user = $user->uid;
 
-    function hook_uc_addresses_address_load($address, $obj) {
+  if ($current_user < 1) {
+      return false;
+  }
+
+    //function hook_uc_addresses_address_load($address, $obj) {
         // Example: set a value for my custom added field (through hook_uc_addresses_fields()).
-        $address->setField('myfield', 'myvalue');
-    }
+        //$address->setField('myfield', 'myvalue');
+    //}
 
   $query = db_select('node', 'n');
   $query->condition('n.type', 'coin');
@@ -285,18 +304,9 @@ function _ulimits_block() {
     $albums_count = 0;
   }
 
-  $file = file_load($user->picture);
 
-
-  if($file) {
-      $uri = $file->uri;
-      $img = image_style_url("profile_picture", $uri);
-  } else {
-      $img = "/sites/default/files/profile.png";
-   }
-
-  $output = '<div class="media"><div class="media-left"><a href="#"><img class="media-object" src="' . $img . '" alt="avatar"></a></div>';
-  $output = $output . '<div class="media-body"><h4 class="media-heading">' . $user->name .'</h4>';
+  $output = '<div class="media"><div class="media-left"><a href="/user" class="tooltipped" data-position="top" data-delay="50" data-tooltip="' . t("My profile") . '">' . _get_user_avatar() . '<h4 class="media-heading">' . $user->name . '</h4></a></div>';
+  $output = $output . '<div class="media-body">';
   $output = $output . $coins_count . ' ' . t('coins(s)') . ' / ' . $albums_count . ' ' . t('album(s)') . ' <sup><a href="/user/my-limits"><i class="icon ion-help-circled"></i></a></sup>';
   $output = $output . userpoints_get_current_points($user->uid, 'all') . ' ' . t('user points') . ' <sup><a href="/user/' . $user->uid . '/points"><i class="icon ion-help-circled"></i></a></sup>';
   $output = $output .  '</div></div>';
@@ -346,7 +356,7 @@ function _coins_taxonomy_tree($terms, $parent = 0, &$node_count = 0) {
     $node_count = 0;
 
     foreach ($terms as $term) {
-       // dsm($term);
+        //dsm($term);
         if ($term->parent == $parent) {
             $children = _coins_taxonomy_tree($terms, $term->tid, $childs_node_count);
             $node_count += $term->node_count + $childs_node_count;
@@ -359,14 +369,13 @@ function _coins_taxonomy_tree($terms, $parent = 0, &$node_count = 0) {
             if ($term->field_cover_image_fid) {
                 $file = file_load($term->field_cover_image_fid);
                 $uri = $file->uri;
-                $img_url = file_create_url($uri);
-                $img = '<img class="activator" src="' . image_style_url("taxonomy_card", $img_url) . '"/>';
+                $img = '<img class="activator" src="' . image_style_url("taxonomy_card", $uri) . '"/>';
             } else {
                 $img = '<img class="activator" src="http://placekitten.com/g/280/280"/>'; //TODO
             }
 
             $class_name = generateRandomClass();
-            $cardtemplate = '<div class="card'  . $is_empty_class .'" data-cardid="' .$class_name . '"><div class="card-image waves-effect waves-block waves-light"><a data-cardid="' .$class_name . '" class="card-link" href="/taxonomy/term/' .$term->tid  . '">' . $img . '<span class="card-hidden-title">' . $term->name . '</span></a></div>';
+            $cardtemplate = '<div class="card-container'  . $is_empty_class .'" data-cardid="' .$class_name . '"><div class="card"><div class="card-image waves-effect waves-block waves-light"><a data-cardid="' .$class_name . '" class="card-link" href="/taxonomy/term/' .$term->tid  . '">' . $img . '<span class="card-hidden-title">' . $term->name . '</span></a></div>';
             $cardtemplate = $cardtemplate . '<div class="card-content"><span class="card-title">' . $term->name . '</span>';
 
             if ($term->description) {
@@ -380,7 +389,7 @@ function _coins_taxonomy_tree($terms, $parent = 0, &$node_count = 0) {
                 $cardtemplate = $cardtemplate . $term->description . '</div>';
             }
 
-            $cardtemplate = $cardtemplate . '</div>';
+            $cardtemplate = $cardtemplate . '</div></div>';
 
 
             $items[] = array(
@@ -411,6 +420,8 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
     $form['base']['ordering'] = FALSE;
 
     $form['base']['prices']['sell_price']['#description'] = t('Customer purchase price or "Buy it now" price');
+
+    $form['field_is_auction']['#access'] = FALSE;
 
       /*
     $form['base']['ordering'] = FALSE;
@@ -537,7 +548,7 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
   }
 
   if ($form['#id'] == 'views-exposed-form-my-coins-page') {
-      dsm($form);
+      //dsm($form);
      // $form['shs_term_node_tid_depth']['#description'] = t('Filter by type');
   }
 
@@ -618,13 +629,22 @@ function coins_form_alter(&$form, &$form_state, $form_id) {
  */
   }
 
-    if ($form['#id'] == 'webform-client-form-967') {
+  if ($form['#id'] == 'webform-client-form-967') {
         $form['submitted']['page_title']['#default_value'] = drupal_get_title();
-        $form['submitted']['page_url']['#default_value'] = request_path();
+        $form['submitted']['page_url']['#default_value'] = current_path();
 
         $form['submitted']['page_title']['#access'] = FALSE;
         $form['submitted']['page_url']['#access'] = FALSE;
-    }
+  }
+
+  //coin clone hook
+  if (!empty($form['#node']->clone_from_original_nid)) {
+      $form['base']['model']['#access'] = FALSE;
+      $form['base']['prices']['sell_price']['#default_value'] = '';
+      $form['base']['prices']['sell_price']['required'] = FALSE;
+      $form['field_sell_item']['und']['#default_value'] = 0;
+  }
+
 
 }
 
@@ -739,3 +759,11 @@ function cart_is_maxed_out_delete() {
 
     return true;
 }
+
+function coins_clone_node_alter(&$node, $context) {
+   // dsm($context);
+    //dsm($form);
+
+    //$context->sell_item['und']['0']['value'] = 0;
+}
+

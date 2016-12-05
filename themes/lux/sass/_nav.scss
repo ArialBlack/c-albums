@@ -1,0 +1,188 @@
+.breadcrumbs {
+ li {
+   &:before {
+     content: '\f125';
+     color: rgba(255,255,255,0.7);
+     vertical-align: top;
+     display: inline-block;
+     font-family: "Ionicons";
+     font-weight: normal;
+     font-style: normal;
+     font-size: 25px;
+     margin: 0 10px 0 8px;
+     -webkit-font-smoothing: antialiased;
+   }
+
+   &.first {
+     &:before {
+       display: none;
+     }
+   }
+
+   a {
+     display: inline;
+   }
+ }
+}
+
+.chip {
+  .icon {
+    cursor: pointer;
+    float: right;
+    font-size: 24px;
+    line-height: 32px;
+    padding-left: 8px;
+  }
+}
+
+.side-nav {
+  z-index: index($elements, dropdown);
+
+  li > a > i,
+  li > a {
+    color: black;
+    font-weight: 400;
+  }
+
+  .facet-search-menu {
+    .standalone-filter {
+      padding: 0 1rem;
+      color: black; //todo
+      border-bottom: 1px solid #ddd;
+
+      i, label {
+        color: black; //todo
+        font-weight: 400;
+      }
+
+      i {
+        vertical-align: middle;
+      }
+    }
+
+    .collapsible-body {
+      //padding: 0;
+
+      li {
+        margin-left: 0;
+        list-style: none;
+        line-height: 20px;
+        font-size: 11px;
+
+        a {
+          height: 20px;
+          line-height: 20px;
+          font-size: 11px;
+
+          &.facetapi-active {
+            display: inline;
+          }
+        }
+
+        &.first {
+          padding-top: 0.25em;
+        }
+
+        &.last {
+            padding-bottom: 0.25em;
+        }
+      }
+
+      .facetapi-facet-field-sell-item {
+        li.first {
+         // display: none;
+        }
+      }
+    }
+
+    li.active {
+      .facetapi-facet-field-sell-item {
+        li.first {
+        //  display: block;
+        }
+      }
+    }
+  }
+}
+
+#nav-mobile {
+  .user-menu,
+  .facet-search-menu {
+
+    border-top: 1px solid #ddd;
+    margin: 0.5rem 0 1rem 0;
+
+    .collapsible-header {
+      cursor: pointer;
+      min-height: 3rem;
+      line-height: 3rem;
+      padding: 0 1rem;
+      background-color: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .collapsible-body {
+      li.last {
+        border-bottom: 1px solid #ddd;
+      }
+
+      li > a {
+        padding-left: 0;
+        padding-right: 0;
+      }
+    }
+  }
+
+  .user-menu {
+    > li.active {
+      border-bottom: 1px solid #ddd;
+    }
+
+    .create-album {
+      .ion-plus-circled {
+        font-size: 14px;
+      }
+
+      .ion-ios-photos {
+        margin-left: -40px;
+        margin-right: 0;
+      }
+    }
+  }
+
+  .profile-menu {
+    .media-left {
+      h4 {
+        display: inline;
+      }
+
+      img {
+        border-radius: 100%;
+      }
+    }
+
+    .collapsible-header {
+      i {
+        display: none;
+      }
+
+      img {
+        height: 28px;
+        border-radius: 100%;
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 12px;
+      }
+
+      &.active {
+        i {
+          display: inline-block;
+        }
+
+        img {
+          display: none;
+        }
+      }
+    }
+  }
+}

@@ -1,15 +1,23 @@
 @import 'materialize';
 @import 'utilites/lists';
+
+@import 'vars';
 @import 'base';
 
-@import 'coins.scss';
+@import 'grid';
+@import 'nav';
+
+@import 'coins';
 @import 'field-coin';
 
-
 .node-type-album {
-  @import 'albums.scss';
+  @import 'albums';
 }
 
 #catalog {
-  @import 'catalog.scss';
+  @import 'catalog';
+}
+
+.page-taxonomy-term {
+  @import 'term';
 }
