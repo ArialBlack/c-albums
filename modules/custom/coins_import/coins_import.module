@@ -1,13 +1,16 @@
-<?php
+﻿<?php
 /**
  * Created by PhpStorm.
  * User: Andrey
  * Date: 24.11.2016
  * Time: 23:39
+ * http://www.coinproject.com/siteimages/28-70-08511q001.jpg
  */
 
 module_load_include('inc', 'coins_import', 'coins_import.grades');
 module_load_include('inc', 'coins_import', 'coins_import.gettype');
+module_load_include('inc', 'coins_import', 'coins_import.import');
+module_load_include('inc', 'coins_import', 'coins_import.create_taxonomy');
 
 /////////////////////////////
 
@@ -26,7 +29,35 @@ function coins_import_menu() {
         'access callback' => TRUE,
     );
 
+    $items['admin/create-taxonomy'] = array(
+        'title' => 'Create taxonomu',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('coins_import_create_taxonomy_form'),
+        'access callback' => TRUE,
+    );
+
     return $items;
+}
+
+function coins_import_create_taxonomy_form() {
+    $form['description'] = array(
+        '#type' => 'markup',
+        '#markup' => '<p>We will create taxonomy</p>',
+    );
+
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => 'Create taxonomy',
+    );
+
+    $terms = _prepare_terms();
+
+    return $form;
+}
+
+function coins_import_create_taxonomy_form_submit() {
+    $terms = _prepare_terms();
+    _create_taxonomy($terms);
 }
 
 function coins_import_form() {
@@ -40,8 +71,12 @@ function coins_import_form() {
         '#value' => 'Import',
     );
 
-    //dsm('t: ', _getcointype('Central Europe and Italy', null, null, 'Ferdinand I'));
-    //dsm('t: ', _getcointype('Roman Imperial', null, null, 'Augustus'));
+    $url = 'http://localhost:3000/coins';
+    $result = drupal_http_request($url);
+    $result_data = json_decode($result->data);
+
+    dsm(count($result_data->message));
+
     return $form;
 }
 
@@ -59,9 +94,9 @@ function coins_import_form_submit($form, &$form_state) {
     $test_array = [];
     $uids_array = [];
 
-    $batch_limit = 3;
+    $batch_limit = 5000;
 
-    for ($i =0; $i < $batch_limit; $i++) {
+    for ($i = 0; $i < $batch_limit; $i++) {
         $random_uid_position = intval(rand(0 , count($uids)-1));
         array_push($test_array, $result_data->message[$i]);
         array_push($uids_array, $uids[$random_uid_position]->uid);
@@ -107,103 +142,7 @@ function coins_import_form_submit($form, &$form_state) {
 function coins_import_operation($row, $u, &$context) {
     // Производим манипуляции над нодами
 
-    $node = new stdClass();
-    $node->type = 'coin';
-    node_object_prepare($node);
-
-    $combined_title = '';
-
-    if (isset($row->issuer)) {
-        $node->field_issuer['und'][0]['value'] = $row->issuer;
-        $combined_title = $combined_title . ' ' . $row->issuer;
-    }
-
-    if (isset($row->denomination)) {
-        $node->field_denomination['und'][0]['value'] = $row->denomination;
-        $combined_title = $combined_title . ' ' . $row->denomination;
-    }
-
-    if (isset($row->date_struck)) {
-        $node->field_date_struck['und'][0]['value'] = $row->date_struck;
-        $combined_title = $combined_title . ' ' . $row->date_struck;
-    }
-
-    $node->title = $combined_title;
-    $node->language = LANGUAGE_NONE;
-    $node->uid = $u;
-    $node->status = 0;
-    $node->revision = FALSE;
-    $node->comment = 0;
-    $node->promote = 0;
-    $node->sticky = 0;
-    $node->log = NULL;
-    $node->created = time();
-
-    if (isset($row->grade)) {
-        $node->field_condition['und'][0]['value'] = coins_import__grades($row->grade);
-    } else {
-        $node->field_condition['und'][0]['value'] = 'c0';
-    }
-
-    if (isset($row->metal)) {
-        $node->field_metal['und'][0]['value'] = coins_import__metals($row->metal);
-    }
-
-    $node->model = generateRandomString();
-
-    $furl = str_replace(array( '[', ']', '"' ), '', $row->photo);
-    $furls = explode(",", $furl);
-
-    $img_count = count($furls);
-    dsm($furls,$img_count);
-
-    ////
-    if($img_count == 1) {
-
-        $directory = file_build_uri('coinsphotoimport');
-        if (!file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-            // If our directory doesn't exist and can't be created, use the default.
-            $directory = NULL;
-        }
-
-        //we need to duplicate file for cropping and B-side
-        for ($f=0; $f <2; $f++) {
-            $file_info = system_retrieve_file($furls[0], $directory, TRUE);
-
-            if($file_info->fid){
-                $node->field_coin['und'][$f]['fid'] = $file_info->fid;
-            }
-        }
-
-    }
-
-    if($img_count > 1) {
-        for ($f = 0; $f < $img_count; $f++) {
-            $furl = str_replace(array( '[', ']', '"' ), '', $furls[$f]);
-            $directory = file_build_uri('coinsphotoimport');
-            if (!file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-                // If our directory doesn't exist and can't be created, use the default.
-                $directory = NULL;
-            }
-            $file_info = system_retrieve_file($furls[$f], $directory, TRUE);
-
-            if($file_info->fid){
-                $node->field_coin['und'][$f]['fid'] = $file_info->fid;
-            }
-        }
-    }
-    ////
-
-    $processed_id = $row->_id;
-    $url_delete = 'http://localhost:3000/coins/' . $processed_id;
-    $options = array(
-        'method' => 'DELETE',
-    );
-    ///////////////////$result_delete = drupal_http_request($url_delete, $options);
-
-    $node = node_submit($node);
-    node_save($node);
-
+    $node = coins_import_createnode($row, $u);
 
     // Эта информация будет доступна в mymodule_batch_finished
     $context['results']['titles'][] = $node->title;
@@ -221,4 +160,43 @@ function coins_import_batch_finished($success, $results, $operations) {
     else {
         drupal_set_message('Завершено с ошибками.', 'error');
     }
+}
+
+function coins_import_update_7004() {
+    // Manual database changes.
+    $field_name = "field_obverse_legend";
+
+    $rows = db_query("SELECT id,data FROM {field_config} WHERE field_name = '{$field_name}' ")->fetchAll(PDO::FETCH_OBJ);
+
+    foreach ($rows as $row ){
+        $row->data=unserialize($row->data);
+        unset($row->data['settings']['max_length']);
+        $row->type="text_long";
+        drupal_write_record("field_config", $row, "id");
+    }
+
+// Update field_config_instance
+    $rows = db_query("SELECT id,data FROM {field_config_instance} WHERE field_name = '{$field_name}'")->fetchAll(PDO::FETCH_OBJ);
+
+    foreach ($rows as $row ){
+        $row->data=unserialize($row->data);
+        $row->data['widget']['type']='text_textarea';
+        unset($row->data['widget']['settings']['size']);
+        $row->data['widget']['settings']['rows']=5;
+        drupal_write_record("field_config_instance", $row, "id");
+    }
+
+// Update the field table
+    db_change_field("field_data_{$field_name}", "{$field_name}_value", "{$field_name}_value", array(
+        "type" => "varchar",
+        "length" => "20000",
+    ));
+    db_change_field("field_revision_{$field_name}", "{$field_name}_value", "{$field_name}_value", array(
+        "type" => "varchar",
+        "length" => "20000",
+    ));
+
+// Clear caches.
+    field_cache_clear(TRUE);
+
 }

@@ -3,6 +3,8 @@
 $GLOBALS['started_user_coins_limit'] = 100;
 $GLOBALS['started_user_albums_limit'] = 2;
 
+module_load_include('inc', 'coins', 'coins.catalog');
+
 function coins_menu() {
     $items = array();
 
@@ -10,6 +12,12 @@ function coins_menu() {
     'title' => 'My limits',
     'page callback' => '_my_limits',
         'access callback' => TRUE //'user_is_logged_in'
+    );
+
+    $items['catalog'] = array(
+        'title' => t('Catalog'),
+        'page callback' => 'coins_catalog',
+        'access callback' => TRUE,
     );
 
     return $items;
@@ -103,11 +111,6 @@ function coins_block_info() {
         'info' => t('User Limits'),
     );
 
-    $blocks['Catalog'] = array(
-        'info' => t('Catalog'),
-        'cache' => DRUPAL_CACHE_GLOBAL,
-    );
-
     $blocks['WritePM'] = array(
         'info' => t('Write private message to user'),
     );
@@ -135,11 +138,6 @@ function coins_block_view($delta = '') {
       $block['subject'] = '';
       $block['content'] = _ulimits_block();
       break;
-
-      case 'Catalog':
-          $block['subject'] = '';
-          $block['content'] = coins_taxonomy_tree(1);
-          break;
 
       case 'WritePM':
           $block['subject'] = '';
@@ -326,84 +324,6 @@ function coins_form_privatemsg_new_alter(&$form, &$form_state, $form_id) {
         );
     }
 }
-
-function coins_taxonomy_tree($vid) {
-    $terms = db_query("
-    SELECT td.tid, td.name, td.description, th.parent, f.field_cover_image_fid, (
-      SELECT COUNT(*) FROM {taxonomy_index} ti
-      LEFT JOIN {node} n ON ti.nid = n.nid
-      WHERE ti.tid = td.tid AND n.status = 1
-    ) node_count FROM {taxonomy_term_data} td
-    INNER JOIN {taxonomy_term_hierarchy} th ON th.tid = td.tid
-    LEFT JOIN {field_data_field_cover_image} f ON f.entity_id = td.tid
-    WHERE vid = :vid
-    ORDER BY weight
-  ", array(':vid' => $vid))->fetchAll();
-
-    //dsm($terms);
-    $output = '<div id="catalog"><div id="catalog-nav"></div>';
-    $output = $output  . '<div class="empty-switch switch"><label>Show empty items<input type="checkbox" checked="checked"><span class="lever"></span></label></div>';
-    $output = $output  . '<div id="catalog-tree">' . theme('item_list', array('items' => _coins_taxonomy_tree($terms)));
-    $output = $output . '</div></div>';
-    return $output;
-}
-
-/**
- * Helper for mymodule_taxonomy_tree()
- */
-function _coins_taxonomy_tree($terms, $parent = 0, &$node_count = 0) {
-    $items = array();
-    $node_count = 0;
-
-    foreach ($terms as $term) {
-        //dsm($term);
-        if ($term->parent == $parent) {
-            $children = _coins_taxonomy_tree($terms, $term->tid, $childs_node_count);
-            $node_count += $term->node_count + $childs_node_count;
-            $is_empty_class = '';
-
-            if (intval($term->node_count + $childs_node_count) == 0) {
-                $is_empty_class = ' is-empty';
-            }
-
-            if ($term->field_cover_image_fid) {
-                $file = file_load($term->field_cover_image_fid);
-                $uri = $file->uri;
-                $img = '<img class="activator" src="' . image_style_url("taxonomy_card", $uri) . '"/>';
-            } else {
-                $img = '<img class="activator" src="http://placekitten.com/g/280/280"/>'; //TODO
-            }
-
-            $class_name = generateRandomClass();
-            $cardtemplate = '<div class="card-container'  . $is_empty_class .'" data-cardid="' .$class_name . '"><div class="card"><div class="card-image waves-effect waves-block waves-light"><a data-cardid="' .$class_name . '" class="card-link" href="/taxonomy/term/' .$term->tid  . '">' . $img . '<span class="card-hidden-title">' . $term->name . '</span></a></div>';
-            $cardtemplate = $cardtemplate . '<div class="card-content"><span class="card-title">' . $term->name . '</span>';
-
-            if ($term->description) {
-                $cardtemplate = $cardtemplate . '<span class="card-title activator grey-text text-darken-4"><i class="icon ion-android-more-vertical"></i></span>';
-            }
-
-            $cardtemplate = $cardtemplate . '<p>' . ($term->node_count + $childs_node_count) .'</p></div>';
-
-            if ($term->description) {
-                $cardtemplate = $cardtemplate . '<div class="card-reveal"><span class="card-title grey-text text-darken-4">' . $term->name . '<i class="icon ion-android-close"></i></span>';
-                $cardtemplate = $cardtemplate . $term->description . '</div>';
-            }
-
-            $cardtemplate = $cardtemplate . '</div></div>';
-
-
-            $items[] = array(
-                //'data' =>  '<a href="/taxonomy/term/' . $term->tid  . '" class="' . generateRandomClass() . '">'  . $term->name .'</a>',
-                'data' =>  $cardtemplate,
-                'children' => $children,
-            );
-        }
-    }
-
-    return $items;
-}
-
-//echo mymodule_taxonomy_tree(1);
 
 function coins_form_alter(&$form, &$form_state, $form_id) {
   global $user;

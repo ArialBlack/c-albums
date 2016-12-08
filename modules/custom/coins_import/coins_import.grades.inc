@@ -8276,3 +8276,17 @@ function coins_import__metals($raw_metal) {
 }
 
 
+function coins_import__struck($raw_struck) {
+
+    switch ($raw_struck) {
+        case 'struck':
+            return 's0';
+            break;
+        case 'cast':
+            return 's1';
+            break;
+        default:
+            return null;
+    }
+}
+
